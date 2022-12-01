@@ -18,9 +18,9 @@ the object type of the variable.
 While writing NXOpen code in python I found this a huge disadvantage, because during coding I rely heavily on code completion (aka intellisense)
 to know the available methods on the objects.
 Apart from an older document from siemens explaining how to get this to work with Eclipse and PyDev add-on, I'm not aware of any other resource to get code completion to work.
-This is why I created my own method (a work in progress, not perfect but still handy) which is  independant from the IDE you are using.
-You can find more information on how to set this up using this link (coming soon)
-[Code completion in python](https://youtu.be/HwKNArNo4FI)
+This is why I created my own method (a work in progress, not perfect but still handy) which is  independent from the IDE you are using.
+You can find more information on how to set this up using this link
+[Code completion in python](https://youtu.be/ODsZF7x7UoQ)
 
 
 ## Type checking in VSCode
