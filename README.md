@@ -6,6 +6,7 @@ If you are interested in learning NXOpen, please check out my course on Udemy:
 >Note this course is in C#, but will teach you the basics, which you can also apply to python
 >The difficulty with learning NXOpen is understanding the NX objects structure, not the language in which the code is written.
 >Moreover, Siemens advises agains using Python if you are starting with NXOpen.
+
 [SimCenter 3D basic NXOpen course (C#)](https://www.udemy.com/course/simcenter3d-basic-nxopen-course/?referralCode=4ABC27CFD7D2C57D220B%20)
 
 
@@ -41,4 +42,4 @@ or locate settings.json under the folder .vscode an add the following entry:
 ### set the vs code interpreter to local environment, so locally installed packages are visible and work with intellisense
 
 locate settings.json under the folder .vscode an add the following entry:
-*"python.defaultInterpreterPath": "\".venv/bin/python\""*
+*"python.defaultInterpreterPath": ".venv/bin/python"*
