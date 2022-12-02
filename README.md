@@ -1,6 +1,9 @@
 # NXOpen-CAE-python
 
-This is a repository with NXOpen code for Siemens SimCenter 3D (aka NX CAE) in python
+This is a repository with NXOpen code for Siemens SimCenter 3D (aka NX CAE) in python.
+At this moment it mirrors the [C# repository](https://github.com/theScriptingEngineer/NXOpen-CAE), but it is not complete yet.
+
+## Learning NXOpen
 
 If you are interested in learning NXOpen, please check out my course on Udemy:
 [SimCenter 3D basic NXOpen course (C#)](https://www.udemy.com/course/simcenter3d-basic-nxopen-course/?referralCode=4ABC27CFD7D2C57D220B%20)
@@ -8,7 +11,6 @@ If you are interested in learning NXOpen, please check out my course on Udemy:
 >Note this course is in C#, but will teach you the basics, which you can also apply to python
 >The difficulty with learning NXOpen is understanding the NX objects structure, not the language in which the code is written.
 >Moreover, Siemens advises agains using Python if you are starting with NXOpen.
-
 
 
 ## Using code completion (aka intellisense) for NXOpen in python
@@ -24,16 +26,20 @@ You can find more information on how to set this up using this link
 
 
 ## Type checking in VSCode
+
 From [this blog](https://www.emmanuelgautier.com/blog/enable-vscode-python-type-checking)
 
 In VSCode go to settings.json (ctrl + P -> settings.json) 
 or locate settings.json under the folder .vscode an add the following entry:
 *"python.analysis.typeCheckingMode": "basic"*
 
+
 ## Local python environment
+
 ### Create a local environment
 
 *python3 -m venv .venv*
+
 
 ### Activate local environment
 
