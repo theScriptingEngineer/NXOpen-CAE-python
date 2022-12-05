@@ -1,8 +1,8 @@
 # NXOpne-CAE-python specific
-/NXOpen/**
-!/NXOpen/.gitkeep
-/NXOpenUI/**
-!/NXOpenUI/.gitkeep
+
+
+# VSCode settings
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
