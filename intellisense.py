@@ -15,6 +15,9 @@ theSession: NXOpen.Session = NXOpen.Session.GetSession()
 basePart = theSession.Parts.BaseWork
 theLW: NXOpen.ListingWindow = theSession.ListingWindow
 
+theUFSession: NXOpen.UF.UFSession = NXOpen.UF.UFSession.GetUFSession()
+assem = theUFSession.Assem
+
 def get_solution(solution_name: str) -> Union[NXOpen.CAE.SimSolution, None]:
     """This function returns the SimSolution object with the given name.
     Returns None if not found, so the user can check and act accordingly
