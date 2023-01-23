@@ -5,8 +5,8 @@
 # This file is used to demonstrate a working intellisense (code completion) for 
 # writing NXOpen journals using Python
 
-import math
 import sys
+import math
 import NXOpen
 import NXOpen.CAE
 from typing import List, cast, Optional, Union

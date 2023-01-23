@@ -1,4 +1,7 @@
  # intellisense by theScriptingEngineer
+ # untested
+
+ # The code for EnvelopeResults has been depricated in NX version 1980, release 2021.2
 
 import math
 import sys
@@ -6,7 +9,7 @@ import os
 import NXOpen
 import NXOpen.CAE
 import NXOpen.Fields
-from typing import List, cast
+from typing import List, cast, Tuple
 
 theSession = NXOpen.Session.GetSession()
 basePart: NXOpen.BasePart = theSession.Parts.BaseWork
@@ -28,13 +31,13 @@ class PostInput:
         self.ResultType = ""
         self.Identifier = ""
     
-    def __init__(self, solution: str, subcase: int, iteration: int, resultType: str, identifier: str):
+    def __init__(self, solution: str, subcase: int, iteration: int, resultType: str, identifier: str = ""):
         """Constructor"""
         self.Solution = solution
         self.Subcase = subcase
         self.Iteration = iteration
         self.ResultType = resultType
-        self.Identifier - identifier
+        self.Identifier = identifier
 
     def ToString(self) -> str:
         """String representation of a PostInput"""
@@ -43,7 +46,16 @@ class PostInput:
 
 def GetSolution(solutionName: str) -> NXOpen.CAE.SimSolution:
     """This function returns the SimSolution object with the given name.
-    Returns None if not foune, so the user can check and act accordingly
+
+    Parameters
+    ----------
+    solutionName: str
+        The name of the solution to return. Case insensitive.
+
+    Returns
+    -------
+    NXOpen.CAE.SimSolution
+        Returns a list of SolutionResult.
     """
     simPart: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, basePart) # explicit casting makes it clear
     simSimulation: NXOpen.CAE.SimSimulation = simPart.Simulation
@@ -54,16 +66,28 @@ def GetSolution(solutionName: str) -> NXOpen.CAE.SimSolution:
     
     return simSolution[0]
 
-def LoadResults(postInputs: List[PostInput]) -> NXOpen.CAE.SolutionResult:
+def LoadResults(postInputs: List[PostInput], referenceType: str = "Structural") -> NXOpen.CAE.SolutionResult:
     """Loads the results for the given list of PostInput and returns a list of SolutionResult.
     An exception is raised if the result does not exist (-> to check if CreateReferenceResult raises error or returns None)
+
+    Parameters
+    ----------
+    postInputs: List[PostInput]
+        The result of each of the provided solutions is loaded.
+    referenceType: str
+        The type of SimResultReference eg. Structural. Defaults to structral
+
+    Returns
+    -------
+    NXOpen.CAE.SolutionResult
+        Returns a list of SolutionResult.
     """
     solutionResults: List[NXOpen.CAE.SolutionResult] = [NXOpen.CAE.SolutionResult] * len(postInputs)
     simPart: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, basePart)
 
     for i in range(len(postInputs)):
         simSolution: NXOpen.CAE.SimSolution = GetSolution(postInputs[i].Solution)
-        simResultReference: NXOpen.CAE.SimResultReference = cast(NXOpen.CAE.SimResultReference, simSolution.Find("Structural"))
+        simResultReference: NXOpen.CAE.SimResultReference = cast(NXOpen.CAE.SimResultReference, simSolution.Find(referenceType))
 
         try:
             # SolutionResult[filename_solutionname]
@@ -74,8 +98,43 @@ def LoadResults(postInputs: List[PostInput]) -> NXOpen.CAE.SolutionResult:
     return solutionResults
 
 
+def GetResultUnits(baseResultTypes: List[NXOpen.CAE.BaseResultType]) -> List[NXOpen.Unit]:
+    """Delete companion result with given name from the given solution.
+
+    Parameters
+    ----------
+    solutionName: str
+        The name of the solution the compnanionresult belongs to
+    companionResultName: str
+        The name of the compnanionresult to delete.
+    referenceType: str
+        The type of SimResultReference eg. Structural. Defaults to structral
+    """
+
+    resultUnits: List[NXOpen.Unit] = [NXOpen.Unit] * len(baseResultTypes)
+    for i in range(len(baseResultTypes)):
+        components: List[NXOpen.CAE.Result.Component] = baseResultTypes[i].AskComponents()
+        resultUnits[i] = baseResultTypes[i].AskDefaultUnitForComponent(components[0])
+
+    return resultUnits
+
+
 def GetResultTypes(postInputs: List[PostInput], solutionResults: List[NXOpen.CAE.SolutionResult]) -> List[NXOpen.CAE.BaseResultType]:
-    """Obtain the ResultTypes from the results file"""
+    """Helper function for CombineResults and GetResultParameters.
+    Returns the ResultTypes specified in PostInputs
+
+    Parameters
+    ----------
+    postInputs: List[PostInput]
+        The input as an array of PostInput.
+    solutionResults: List[NXOpen.CAE.SolutionResult]
+        The already loaded results to search through for the results.
+
+    Returns
+    -------
+    List[NXOpen.CAE.BaseResultType]
+        Returns the result objects
+    """
     resultTypes: List[NXOpen.CAE.BaseResultType] = [NXOpen.CAE.BaseResultType] * len(postInputs)
     for i in range(len(postInputs)):
         baseLoadCases: List[NXOpen.CAE.BaseLoadcase] = solutionResults[i].GetLoadcases()
@@ -88,9 +147,18 @@ def GetResultTypes(postInputs: List[PostInput], solutionResults: List[NXOpen.CAE
     
     return resultTypes
 
-
 def DeleteCompanionResult(solutionName: str, companionResultName: str, referenceType: str = "Structural") -> None:
-    """Delete a companion result with the given name in the given solution. Defaults to a structral result"""
+    """Delete companion result with given name from the given solution.
+
+    Parameters
+    ----------
+    solutionName: str
+        The name of the solution the compnanionresult belongs to
+    companionResultName: str
+        The name of the compnanionresult to delete.
+    referenceType: str
+        The type of SimResultReference eg. Structural. Defaults to structral
+    """
     simSolution: NXOpen.CAE.SimSolution = GetSolution(solutionName)
     simResultReference: NXOpen.CAE.SimResultReference = cast(NXOpen.CAE.SimResultReference, simSolution.Find(referenceType))
     companionResult: List[NXOpen.CAE.CompanionResult] = [item for item in simResultReference.CompanionResults if item.Name.lower() == companionResultName.lower()]
@@ -100,7 +168,21 @@ def DeleteCompanionResult(solutionName: str, companionResultName: str, reference
 
 
 def GetSimResultReference(solutionName: str, referenceType: str = "Structural") -> NXOpen.CAE.SimResultReference:
-    """Get the SimResultReference for a given solution. Defualts to the Structural SimResultReference."""
+    """Helper function for CombineResults and EnvelopeResults.
+    Returns the SimResultReferece for the given solution
+
+    Parameters
+    ----------
+    solutionName: str
+        The solution for which to get the "structural" SimResultReference.
+    referenceType: str
+        The type of SimResultReference eg. Structural. Defaults to structral
+
+    Returns
+    -------
+    NXOpen.CAE.SimResultReference
+        Returns the "Structural" simresultreference.
+    """
     simSolution: NXOpen.CAE.SimSolution = GetSolution(solutionName)
     if simSolution == None:
         # solution with given name not found
@@ -110,9 +192,22 @@ def GetSimResultReference(solutionName: str, referenceType: str = "Structural") 
     return simResultReference
 
 def CreateFullPath(fileName: str) -> str:
-    """Checks if .unv extension if present and adds if not.
-    Checks if path is present and adds path of basepart if not.
+    """This function takes a filename and adds the .unv extension and path of the part if not provided by the user.
+    If the fileName contains an extension, this function leaves it untouched, othwerwise adds .unv as extension.
+    If the fileName contains a path, this function leaves it untouched, otherwise adds the path of the BasePart as the path.
     Undefined behaviour if basePart has not yet been saved (eg FullPath not available)
+
+    Parameters
+    ----------
+    fileName: str
+        The filename with or without path and .unv extension.
+    solutionResults: List[NXOpen.CAE.SolutionResult]
+        The solution results from which the representation is obtained.
+
+    Returns
+    -------
+    str
+        A string with .unv extension and path of the basePart if the fileName parameter did not include a path.
     """
     # check if .unv is included in fileName
     if os.path.splitext(fileName)[1] != ".unv":
@@ -131,6 +226,11 @@ def CheckPostInput(postInputs: List[PostInput]) -> None:
     """Check if the provided list of PostInput will not return an error when used in CombineResults.
     Identifiers are checked with separate function CheckPostInputIdentifiers
     Raises exceptions which can be caught by the user.
+
+    Parameters
+    ----------
+    postInputs: List[PostInput]
+        The array of PostInput to check.
     """
     for i in range(len(postInputs)):
         # Does the solution exist?
@@ -180,8 +280,15 @@ def CheckPostInput(postInputs: List[PostInput]) -> None:
 
 
 def CheckPostInputIdentifiers(postInputs: List[PostInput]) -> None:
-    """Check if the provided list of PostInput will not return an error with respect to the Identifier when used in CombineResults.
-    Raises exceptions which can be caught by the user.
+    """This function verifies the identifiers in all PostInputs:
+        Null or empty string.
+        Reserved expression name.
+        Use of an expression which already exists.
+
+    Parameters
+    ----------
+    postInputs: List[PostInput]
+        The array of PostInput to check.
     """
     for i in range(len(postInputs)):
         # is the identifier not null
@@ -206,9 +313,48 @@ def CheckPostInputIdentifiers(postInputs: List[PostInput]) -> None:
             raise ValueError("Expression with name " + postInputs[i].Identifier + " already exist in this part and cannot be used as an identifier.")
 
 
+def CheckUnvFileName(unvFileName: str) -> None:
+    """This method loops through all solutions and all companion results in these solutions.
+    It checks if the file name is not already in use by another companion result.
+    And throws an error if so.
+
+    Parameters
+    ----------
+    unvFileName: str
+        The file name to look for.
+    """
+
+    # Don't perform checks on the file itself in the file system!
+    simPart: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, basePart)
+    # loop through all solutions
+    solutions: List[NXOpen.CAE.SimSolution] = simPart.Simulation.Solutions.ToArray()
+    for i in range(len(solutions)):
+        simResultReference: NXOpen.CAE.SimResultReference = GetSimResultReference(solutions[i].Name)
+        # loop through each companion result
+        companionResults: List[NXOpen.CAE.CompanionResult] = simResultReference.CompanionResults.ToArray()
+        for j in range(len(companionResults)):
+            # create the builder with the companion result, so can access the CompanionResultsFile
+            companionResultBuilder: NXOpen.CAE.CompanionResultBuilder = simResultReference.CompanionResults.CreateCompanionResultBuilder(companionResults[j])
+            if (companionResultBuilder.CompanionResultsFile.lower() == unvFileName.lower()):
+                # the file is the same, so throw exception
+                raise ValueError("Companion results file name " + unvFileName + " is already used by companion result " + companionResults[j].Name)
+
+
 def GetFullResultNames(postInputs: List[PostInput], solutionResults: List[NXOpen.CAE.SolutionResult]) -> List[str]:
-    """Get a list of the Solution::Subcase::Iteration::ResultType for each PostInput.
-    The names are obtained from the results file itself.
+    """This function returns a representation of the Results used in PostInputs.
+    Note that the representation is taken from the SolutionResult and not the SimSolution!
+
+    Parameters
+    ----------
+    postInputs: List[PostInput]
+        The list of PostInput defining the results.
+    solutionResults: List[NXOpen.CAE.SolutionResult]
+        The solution results from which the representation is obtained.
+
+    Returns
+    -------
+    List[str]
+        List of string with each representation.
     """
     fullResultNames: List[str] = [str] * len(postInputs)
     for i in range(len(postInputs)):
@@ -312,7 +458,7 @@ def CombineResults(postInputs: List[PostInput], formula: str, companionResultNam
         
         theLW.WriteFullline("Formula with results:")
         for i in range(len(postInputs)):
-            formula = formula.Replace(postInputs[i].Identifier, fullResultNames[i])
+            formula = formula.replace(postInputs[i].Identifier, fullResultNames[i])
         theLW.WriteFullline(formula)
                 
     except Exception as e:
@@ -329,16 +475,6 @@ def CombineResults(postInputs: List[PostInput], formula: str, companionResultNam
             if len(check) != 0:
                 # expression found, thus deleting
                 simPart.Expressions.Delete(check[0])
-
-
-def GetResultUnits(baseResultTypes: List[NXOpen.CAE.BaseResultType]) -> List[NXOpen.Unit]:
-    """Obtain the unit for each BaseResultType provided."""
-    resultUnits: List[NXOpen.Unit] = [NXOpen.Unit] * len(baseResultTypes)
-    for i in range(len(baseResultTypes)):
-        components: List[NXOpen.CAE.ResultComponent] = baseResultTypes[i].AskComponents()
-        resultUnits[i] = baseResultTypes[i].AskDefaultUnitForComponent(components[0])
-
-    return resultUnits
 
 
 def ExportResult(postInput: PostInput, unvFileName: str, sIUnits: bool = False) -> None:
@@ -441,15 +577,143 @@ def ExportResult(postInput: PostInput, unvFileName: str, sIUnits: bool = False) 
                 simPart.Expressions.Delete(check[0])
 
 
+def GetResultParamaters(resultTypes: List[NXOpen.CAE.BaseResultType], resultSection: NXOpen.CAE.Result.Section, resultComponent: NXOpen.CAE.Result.Component, absolute: bool) -> List[NXOpen.CAE.ResultParameters]:
+    resultParameterList: List[NXOpen.CAE.ResultParameters] = [NXOpen.CAE.ResultParameters] * len(resultTypes)
+
+    for i in range(len(resultParameterList)):
+        resultParameters: NXOpen.CAE.ResultParameters = theSession.ResultManager.CreateResultParameters()
+        resultParameters.SetGenericResultType(resultTypes[i])
+        resultParameters.SetResultShellSection(resultSection)
+        resultParameters.SetResultComponent(resultComponent)
+        resultParameters.SetSelectedCoordinateSystem(NXOpen.CAE.Result.CoordinateSystem.None, -1)
+        resultParameters.MakeElementResult(False)
+
+        # components: List[NXOpen.CAE.Result.Component] = resultTypes[i].AskComponents()
+        result: Tuple[List[NXOpen.CAE.Result.Component], List[str]] = resultTypes[i].AskComponents()
+        unit: NXOpen.Unit = resultTypes[i].AskDefaultUnitForComponent(result[0][0]) # [0] for the list of componentns and another [0] for the first componentn
+        resultParameters.SetUnit(unit)
+
+        resultParameters.SetAbsoluteValue(absolute)
+        resultParameters.SetTensorComponentAbsoluteValue(NXOpen.CAE.Result.TensorDerivedAbsolute.DerivedComponent)
+
+        resultParameterList[i] = resultParameters
+    
+    return resultParameterList
+
+
+def EnvelopeResults(postInputs: List[PostInput], companionResultName: str, unvFileName: str, envelopeOperation: NXOpen.CAE.ResultsEnvelopeBuilder.Operation, resultSection: NXOpen.CAE.Result.Section, resultComponent: NXOpen.CAE.Result.Component, absolute: bool, solutionName: str = "") -> None:
+    if not isinstance(basePart, NXOpen.CAE.SimPart):
+        theLW.WriteFullline("ExportResult needs to start from a .sim file. Exiting")
+        return
+    simPart: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, basePart)
+
+    # check input and catch errors so that the user doesn't get a error pop-up in SC
+    try:
+        CheckPostInput(postInputs)
+    
+    except ValueError as e:
+        # internal raised exceptions are raised as valueError
+        theLW.WriteFullline("Did not execute ExportResult due to input error. Please check the previous messages.")
+        # we still return the tehcnical message as an additional log
+        theLW.WriteFullline(e)
+        return
+    except:
+        theLW.WriteFullline("Did not execute ExportResult due to general error. Please check the previous messages.")
+        # we still return the tehcnical message as an additional log
+        theLW.WriteFullline(e)
+        return
+
+
+    # Select the solution to add the companion result to
+    simResultReference: NXOpen.CAE.SimResultReference 
+    if (GetSolution(solutionName) != None):
+        # delete the companion result if it exists so we can create a new one with the same name (eg overwrite)
+        DeleteCompanionResult(solutionName, companionResultName)
+        # get the SimResultReference to add the companion result to.
+        simResultReference = GetSimResultReference(solutionName)
+    else:
+        if (solutionName != ""):
+            theLW.WriteFullline("Solution with name " + solutionName + " not found. Adding companion result to solution " + postInputs[0].Solution)
+        
+        # delete the companion result if it exists so we can create a new one with the same name (eg overwrite)
+        DeleteCompanionResult(postInputs[0].Solution, companionResultName)
+
+        # get the SimResultReference to add the companion result to. Now hard coded as the solution of the first PostInput
+        simResultReference = GetSimResultReference(postInputs[0].Solution)
+
+    # Make sure the file is complete with path and extension
+    unvFullName: str = CreateFullPath(unvFileName)
+
+    # Check if unvFullName is not already in use by another companion result
+    # No risk of checking the file for this companion result as DeleteCompanionResult has already been called.
+    try:
+        CheckUnvFileName(unvFullName)
+    except ValueError as e:
+        # ChechUnvFileName throws an error with the message containing the filename and the companion result.
+        theLW.WriteFullline(e)
+        return
+    
+    # Load all results
+    solutionResults: List[NXOpen.CAE.SolutionResult] = LoadResults(postInputs)
+
+    # Get the requested results
+    resultTypes: List[NXOpen.CAE.BaseResultType] = GetResultTypes(postInputs, solutionResults)
+
+    # create an array of resultParameters with the inputs and settings from the user.
+    resultParameters: List[NXOpen.CAE.ResultParameters] = GetResultParamaters(resultTypes, resultSection, resultComponent, absolute)
+
+    resultsEnvelopeBuilder: NXOpen.CAE.ResultsEnvelopeBuilder = theSession.ResultManager.CreateResultsEnvelopeBuilder()
+    resultsEnvelopeBuilder.SetResults(solutionResults, resultParameters)
+    resultsEnvelopeBuilder.SetOperation(envelopeOperation)
+    resultsEnvelopeBuilder.SetOutputResultType(NXOpen.CAE.ResultsManipulationBuilder.OutputResultType.Companion)
+    resultsEnvelopeBuilder.SetIncludeModel(False)
+    resultsEnvelopeBuilder.SetCompanionResultReference(simResultReference)
+    resultsEnvelopeBuilder.SetCompanionResultName(companionResultName)
+    resultsEnvelopeBuilder.SetAppendMethod(NXOpen.CAE.ResultsManipulationBuilder.ResultAppendMethod.CreateNewLoadCases)
+    resultsEnvelopeBuilder.SetImportResult(True)
+    resultsEnvelopeBuilder.SetOutputQuantity(resultTypes[0].Quantity)
+    resultsEnvelopeBuilder.SetOutputName(str(envelopeOperation) + " " + str(resultTypes[0].Quantity) + " (" + str(resultComponent) + ")") # ("Maximum Stress(Von-Mises)")
+    resultsEnvelopeBuilder.SetLoadcaseName(companionResultName)
+    resultsEnvelopeBuilder.SetOutputFile(unvFullName)
+    resultsEnvelopeBuilder.SetUnitsSystem(NXOpen.CAE.ResultsManipulationBuilder.UnitsSystem.FromResult)
+    resultsEnvelopeBuilder.SetUnitsSystemResult(solutionResults[0])
+    resultsEnvelopeBuilder.SetIncompatibleResultsOption(NXOpen.CAE.ResultsEnvelopeBuilder.IncompatibleResults.Skip)
+    resultsEnvelopeBuilder.SetNoDataOption(NXOpen.CAE.ResultsEnvelopeBuilder.NoData.Skip)
+
+    # get the full result names for user feedback. Do this before the try catch block, otherwise the variable is no longer available
+    fullResultNames: List[str]  = GetFullResultNames(postInputs, solutionResults)
+
+    try:
+        resultsEnvelopeBuilder.Commit()
+
+        # user feedback
+        theLW.WriteFullline("Created an envelope for the following results for " + str(envelopeOperation) + " " + str(resultComponent))
+        for i in range(len(postInputs)):
+            theLW.WriteFullline(fullResultNames[i]);
+
+        theLW.WriteFullline("Section location: " + str(resultSection))
+        theLW.WriteFullline("Absolute: " + str(absolute))
+    
+    except ValueError as e:
+        theLW.WriteFullline("Error in EnvelopeResults!")
+        theLW.WriteFullline(e)
+        raise e
+    
+    finally:
+        resultsEnvelopeBuilder.Destroy()
+        for i in range(len(resultParameters)):
+            theSession.ResultManager.DeleteResultParameters(resultParameters[i])
+
+
 def main() :
     theLW.Open()
     theLW.WriteFullline("Starting Main() in " + theSession.ExecutingJournal)
     
-    combine1: PostInput = PostInput("Transverse", 1, 1, "[Stress][Element-Nodal]", "Stress1")
-    combine2: PostInput = PostInput("Longitudinal", 1, 1, "[Stress][Element-Nodal]", "Stress1")
+    combine1: PostInput = PostInput("Transverse", 1, 1, "Stress - Element-Nodal", "Stress1")
+    combine2: PostInput = PostInput("Longitudinal", 1, 1, "Stress - Element-Nodal", "Stress2")
 
     postInputs: List[PostInput] = [combine1, combine2]
-    CombineResults(postInputs)
+    CombineResults(postInputs, "Stress1 + Stress2", "sumLoadCase1", "sumLoadCase1")
 
     export: PostInput = PostInput("Longitudinal", 1, 1, "Displacement - Nodal")
     ExportResult(export, "exportedResult")
