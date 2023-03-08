@@ -11,12 +11,12 @@ import NXOpen
 import NXOpen.CAE
 from typing import List, cast, Optional, Union
 
-theSession: NXOpen.Session = NXOpen.Session.GetSession()
-basePart = theSession.Parts.BaseWork
-theLW: NXOpen.ListingWindow = theSession.ListingWindow
+the_session: NXOpen.Session = NXOpen.Session.GetSession()
+base_part = the_session.Parts.BaseWork
+the_lw: NXOpen.ListingWindow = the_session.ListingWindow
 
-theUFSession: NXOpen.UF.UFSession = NXOpen.UF.UFSession.GetUFSession()
-assem = theUFSession.Assem
+the_uf_session: NXOpen.UF.UFSession = NXOpen.UF.UFSession.GetUFSession()
+assem = the_uf_session.Assem
 
 def get_solution(solution_name: str) -> Union[NXOpen.CAE.SimSolution, None]:
     """This function returns the SimSolution object with the given name.
@@ -44,7 +44,7 @@ def get_solution(solution_name: str) -> Union[NXOpen.CAE.SimSolution, None]:
     # sim_solutions: List[NXOpen.CAE.SimSolution] = sim_part.Simulation.Solutions.ToArray()
 
     # # minimal working example Visual Studio Code
-    sim_part = cast(NXOpen.CAE.SimPart, basePart)  # explicit casting required in Visual Studio Code
+    sim_part = cast(NXOpen.CAE.SimPart, base_part)  # explicit casting required in Visual Studio Code
     sim_solutions = sim_part.Simulation.Solutions.ToArray()
 
     sim_solution = [item for item in sim_solutions if item.Name.lower() == solution_name.lower()]
@@ -57,8 +57,8 @@ def get_solution(solution_name: str) -> Union[NXOpen.CAE.SimSolution, None]:
 
 
 def main():
-    theLW.Open()
-    theLW.WriteFullline("Starting Main() in " + theSession.ExecutingJournal)
+    the_lw.Open()
+    the_lw.WriteFullline("Starting Main() in " + the_session.ExecutingJournal)
 
     my_solution: NXOpen.CAE.SimSolution = get_solution("my_solution_name")
     if my_solution is not None:
