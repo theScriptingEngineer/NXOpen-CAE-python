@@ -2,9 +2,6 @@
 # NXOpen Python Reference Guide:
 # https://docs.plm.automation.siemens.com/data_services/resources/nx/1899/nx_api/custom/en_US/nxopen_python_ref/index.html
 
-# This file is used to demonstrate a working intellisense (code completion) for 
-# writing NXOpen journals using Python
-
 import sys
 import math
 import NXOpen
@@ -87,7 +84,7 @@ def main():
 
     thicknesses: List[float] = [6, 8, 10, 12, 14, 15, 16, 18, 20, 22, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90, 100]
     for i in range(len(thicknesses)):
-        create_mesh_collector(thicknesses[i], i + 1)
+        create_2dmesh_collector(thicknesses[i], i + 1)
 
 
 if __name__ == '__main__':
