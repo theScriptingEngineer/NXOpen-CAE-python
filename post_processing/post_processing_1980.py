@@ -193,7 +193,7 @@ def get_sim_result_reference(solution_name: str, reference_type: str = "Structur
     simResultReference: NXOpen.CAE.SimResultReference = cast(NXOpen.CAE.SimResultReference, simSolution.Find(reference_type))
     return simResultReference
 
-def create_full_path(file_name: str) -> str:
+def create_full_path(file_name: str, extension: str = ".unv") -> str:
     """This function takes a filename and adds the .unv extension and path of the part if not provided by the user.
     If the fileName contains an extension, this function leaves it untouched, othwerwise adds .unv as extension.
     If the fileName contains a path, this function leaves it untouched, otherwise adds the path of the BasePart as the path.
@@ -209,9 +209,9 @@ def create_full_path(file_name: str) -> str:
     str
         A string with .unv extension and path of the basePart if the fileName parameter did not include a path.
     """
-    # check if .unv is included in fileName
-    if os.path.splitext(file_name)[1] != ".unv":
-        file_name = file_name + ".unv"
+    # check if an extension is included
+    if os.path.splitext(file_name)[1] == "":
+        file_name = file_name + extension
 
     # check if path is included in fileName, if not add path of the .sim file
     unv_file_path: str = os.path.dirname(file_name)

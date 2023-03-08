@@ -48,9 +48,11 @@ def create_2dmesh_collector(thickness: float, physical_property_label: int) -> O
 
     material_manager: NXOpen.CAE.MaterialManager = cast(NXOpen.CAE.MaterialManager, fem_part.MaterialManager) # cast only required because of intellisensse
     physical_materials: List[NXOpen.CAE.PhysicalMaterial] = material_manager.PhysicalMaterials.GetUsedMaterials()
-    steel: NXOpen.CAE.PhysicalMaterial = [item for item in physical_materials if item.Name == "Steel"]
+    steel: List[NXOpen.CAE.PhysicalMaterial] = [item for item in physical_materials if item.Name == "Steel"]
     if steel == None:
         steel = material_manager.PhysicalMaterials.LoadFromNxlibrary("Steel")
+    else:
+        steel = steel[0]
 
     property_table: NXOpen.CAE.PropertyTable = physical_property_table.PropertyTable
     property_table.SetMaterialPropertyValue("material", False, steel)
