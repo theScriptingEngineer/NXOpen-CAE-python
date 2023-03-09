@@ -2,6 +2,8 @@
 # NXOpen Python Reference Guide:
 # https://docs.plm.automation.siemens.com/data_services/resources/nx/1899/nx_api/custom/en_US/nxopen_python_ref/index.html
 
+# untested
+
 import sys
 import os
 import subprocess

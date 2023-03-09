@@ -12,14 +12,14 @@ import NXOpen.CAE
 from typing import List, cast, Optional, Union
 import openpyxl # pip install openpyxl
 
-theSession: NXOpen.Session = NXOpen.Session.GetSession()
-basePart = theSession.Parts.BaseWork
-theLW: NXOpen.ListingWindow = theSession.ListingWindow
+the_session: NXOpen.Session = NXOpen.Session.GetSession()
+base_part = the_session.Parts.BaseWork
+the_lw: NXOpen.ListingWindow = the_session.ListingWindow
 
 
 def main():
-    theLW.Open()
-    theLW.WriteFullline("Starting Main() in " + theSession.ExecutingJournal)
+    the_lw.Open()
+    the_lw.WriteFullline("Starting Main() in " + the_session.ExecutingJournal)
  
     file_name = sys.argv[1] # "C:\\temp\\Sample1.xlsx"
     # opening with the data_only=True option gives the values in case the cell contains a formula.
