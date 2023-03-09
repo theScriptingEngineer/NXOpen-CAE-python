@@ -8,6 +8,7 @@ At this moment it mirrors the [C# repository](https://github.com/theScriptingEng
 If you are interested in learning NXOpen, please check out my course on Udemy:
 [SimCenter 3D basic NXOpen course (C#)](https://www.udemy.com/course/simcenter3d-basic-nxopen-course/?referralCode=4ABC27CFD7D2C57D220B%20)
 
+**30% off with coupon code WHYCLICKJUSTSCRIPT (valid till April 6th 2023)**
 >Note this course is in C#, but will teach you the basics, which you can also apply to python
 >The difficulty with learning NXOpen is understanding the NX objects structure, not the language in which the code is written.
 >Moreover, Siemens advises agains using Python if you are starting with NXOpen.
