@@ -1,7 +1,7 @@
 # NXOpen-CAE-python
 
 This is a repository with NXOpen code for Siemens SimCenter 3D (aka NX CAE) in python.
-At this moment it mirrors the [C# repository](https://github.com/theScriptingEngineer/NXOpen-CAE), but it is not complete yet.
+At this moment it mirrors the [C# repository](https://github.com/theScriptingEngineer/NXOpen-CAE)
 
 ## Learning NXOpen
 

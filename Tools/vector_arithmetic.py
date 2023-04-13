@@ -16,17 +16,18 @@ the_lw: NXOpen.ListingWindow = the_session.ListingWindow
 
 
 def print_vector3(vector: NXOpen.VectorArithmetic.Vector3) -> str:
-    """This function returns string representation of a NXOpen.VectorArithmetic.Vector3
+    """This function takes a NXOpen.VectorArithmetic.Vector3 and creates a string representation.
+       Required because there is not overridden __str__ method in the class.
 
     Parameters
     ----------
     vector: NXOpen.VectorArithmetic.Vector3
-        The vector to represent as string
+        The vector to represent as string.
 
     Returns
     -------
     str
-        A string representation of the vector3
+        A string representation of a NXOpen.VectorArithmetic.Vector3
     """
     return "(" + str(vector.x) + ", " + str(vector.y) + ", " + str(vector.z) + ")"
 
