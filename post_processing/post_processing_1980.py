@@ -39,7 +39,7 @@ class PostInput:
         self._resultType = resultType
         self._identifier = identifier
 
-    def ToString(self) -> str:
+    def __repr__(self) -> str:
         """String representation of a PostInput"""
         return "Solution: " + self._solution + " Subcase: " + str(self._subcase) + " Iteration: " + str(self._iteration) + " ResultType: " + self._resultType + " Identifier: " + self._identifier
 
@@ -236,7 +236,7 @@ def check_post_input(post_inputs: List[PostInput]) -> None:
         # Does the solution exist?
         sim_solution: NXOpen.CAE.SimSolution = get_solution(post_inputs[i]._solution)
         if sim_solution == None:
-            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
+            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
             the_lw.WriteFullline("Solution with name " + post_inputs[i]._solution + " not found.")   
             raise ValueError("Solution with name " + post_inputs[i]._solution + " not found")
         
@@ -245,7 +245,7 @@ def check_post_input(post_inputs: List[PostInput]) -> None:
         try:
             solution_result = load_results([post_inputs[i]])
         except:
-            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
+            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
             the_lw.WriteFullline("No result for Solution with name " + post_inputs[i]._solution)   
             raise
         
@@ -255,7 +255,7 @@ def check_post_input(post_inputs: List[PostInput]) -> None:
         try:
             loadCase = cast(NXOpen.CAE.Loadcase, base_load_cases[post_inputs[i]._subcase - 1]) # user starts counting at 1
         except:
-            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
+            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
             the_lw.WriteFullline("SubCase with number " + str(post_inputs[i]._subcase) + " not found in solution with name " + post_inputs[i]._solution)
             raise
 
@@ -265,7 +265,7 @@ def check_post_input(post_inputs: List[PostInput]) -> None:
         try:
             iteration = cast(NXOpen.CAE.Iteration, base_iterations[post_inputs[i]._iteration - 1]) # user starts counting at 1
         except:
-            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
+            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
             the_lw.WriteFullline("Iteration number " + str(post_inputs[i]._iteration) + "not found in SubCase with number " + str(post_inputs[i]._subcase) + " in solution with name " + post_inputs[i]._solution) 
             raise
 
@@ -274,7 +274,7 @@ def check_post_input(post_inputs: List[PostInput]) -> None:
         base_result_type: List[NXOpen.CAE.BaseResultType] = [item for item in base_result_types if item.Name.lower().strip() == post_inputs[i]._resultType.lower().strip]
         if len(base_result_type) == 0:
             # resulttype does not exist
-            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
+            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
             the_lw.WriteFullline("ResultType " + post_inputs[i]._resultType + "not found in iteration number " + str(post_inputs[i]._iteration) + " in SubCase with number " + str(post_inputs[i]._subcase) + " in solution with name " + post_inputs[i]._solution)
             raise ValueError("ResultType " + post_inputs[i]._resultType + "not found in iteration number " + str(post_inputs[i]._iteration) + " in SubCase with number " + str(post_inputs[i]._subcase) + " in solution with name " + post_inputs[i]._solution)
 
@@ -293,7 +293,7 @@ def check_post_input_identifiers(post_inputs: List[PostInput]) -> None:
     for i in range(len(post_inputs)):
         # is the identifier not null
         if post_inputs[i]._identifier == "":
-            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
+            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
             the_lw.WriteFullline("No identifier provided for solution " + post_inputs[i]._solution + " SubCase " + str(post_inputs[i]._subcase) + " iteration " + str(post_inputs[i]._iteration) + " ResultType " + post_inputs[i]._resultType) 
             raise ValueError("No identifier provided for solution " + post_inputs[i]._solution + " SubCase " + str(post_inputs[i]._subcase) + " iteration " + str(post_inputs[i]._iteration) + " ResultType " + post_inputs[i]._resultType)
 
@@ -301,14 +301,14 @@ def check_post_input_identifiers(post_inputs: List[PostInput]) -> None:
         nx_reserved_expressions: List[str] = ["angle", "angular velocity", "axial", "contact pressure", "Corner ID", "depth", "dynamic viscosity", "edge_id", "element_id", "face_id", "fluid", "fluid temperature", "frequency", "gap distance", "heat flow rate", "iter_val", "length", "mass density", "mass flow rate", "node_id", "nx", "ny", "nz", "phi", "pressure", "radius", "result", "rotational speed", "solid", "solution", "specific heat", "step", "temperature", "temperature difference", "thermal capacitance", "thermal conductivity", "theta", "thickness", "time", "u", "v", "velocity", "volume flow rate", "w", "x", "y", "z"]
         check: List[str] = [item for item in nx_reserved_expressions if item.lower() == post_inputs[i]._identifier.lower()]
         if len(check) != 0:
-            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
+            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
             the_lw.WriteFullline("Expression with name " + post_inputs[i]._identifier + " is a reserved expression in nx and cannot be used as an identifier.");  
             raise ValueError("Expression with name " + post_inputs[i]._identifier + " is a reserved expression in nx and cannot be used as an identifier.")
 
         # check if identifier is not already in use as an expression
         expressions: List[NXOpen.Expression] = [item for item in base_part.Expressions if item.Name.lower() == post_inputs[i]._identifier.lower()]
         if len(expressions) != 0:
-            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
+            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
             the_lw.WriteFullline("Expression with name " + post_inputs[i]._identifier + " already exist in this part and cannot be used as an identifier.")
             raise ValueError("Expression with name " + post_inputs[i]._identifier + " already exist in this part and cannot be used as an identifier.")
 
