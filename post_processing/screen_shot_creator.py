@@ -49,9 +49,10 @@
 #  If you also set UGII_CAE_POST_TEMPLATE_EDITOR to for example notepad++.exe,
 #  you can directly edit by right-clicking the template in the NX GUI
 
-# tested in
+# tested in:
 #  - NX12
-#  - Simcenter release 2022.1 (version 2023)
+#  - Simcenter3D release 2022.1 (version 2023)
+#  - Simcenter3D 2212
 
 
 import sys
@@ -198,8 +199,8 @@ def check_screenshots(screenshots: List[ScreenShot]) -> None:
     check_post_input(screenshots)
 
     sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part)
-    cae_groups: List[NXOpen.CAE.CaeGroup] = sim_part.CaeGroups
-    cameras: List[NXOpen.Display.Camera] = sim_part.Cameras
+    cae_groups: NXOpen.CAE.CaeGroupCollection = sim_part.CaeGroups
+    cameras: NXOpen.Display.CameraCollection = sim_part.Cameras
     # Reload in case template was just created
     the_session.Post.ReloadTemplates()
 
@@ -360,32 +361,41 @@ def set_post_template(postview_id: int, template_name: str) -> None:
     the_session.Post.PostviewApplyTemplate(postview_id, template_id)
 
 
+def display_elements_in_group_via_postgroup(postview_id: int, group_name: str) -> None:
+    # NX creates it's own postgroups from the groups in the sim.
+    # It only creates a postgroup if either nodes or elements are present in the group.
+    # Therefore it's hard to relate the postgroup labels to the group labels in the simfile...
+    sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part)
+    cae_groups: NXOpen.CAE.CaeGroupCollection = sim_part.CaeGroups
+    cae_group: NXOpen.CAE.CaeGroup = [x for x in cae_groups if x.Name.lower() == group_name.lower()][0]
+
+    groupItems: List[NXOpen.TaggedObject] = cae_group.GetEntities()
+    # one longer, otherwise a single element is missing from each screenshot (bug in NX)
+    groupElementLabels: List[int] = [NXOpen.CAE.BaseResultType] * (len(groupItems) + 1)
+    groupElementLabels[0] = 0
+    for i in range(len(groupItems)):
+        if isinstance(groupItems[i], NXOpen.CAE.FEElement):
+            groupElementLabels[i + 1] = (cast(NXOpen.CAE.FEElement, groupItems[i])).Label
+
+    userGroupIds: List[int] = [int] * 1
+    # This creates a "PostGroup"
+    userGroupIds[0] = the_session.Post.CreateUserGroupFromEntityLabels(postview_id, NXOpen.CAE.CaeGroupCollection.EntityType.Element, groupElementLabels) # type: ignore
+    the_session.Post.PostviewApplyUserGroupVisibility(postview_id, userGroupIds, NXOpen.CAE.Post.GroupVisibility.ShowOnly) # type: ignore
+
+
 def display_elements_in_group(postview_id: int, group_name: str) -> None:
-
     if nx_version == "v12":
-        # NX creates it's own postgroups from the groups in the sim.
-        # It only creates a postgroup if either nodes or elements are present in the group.
-        # Therefore it's hard to relate the postgroup labels to the group labels in the simfile...
-        sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part)
-        cae_groups: List[NXOpen.CAE.CaeGroup] = sim_part.CaeGroups
-        cae_group: NXOpen.CAE.CaeGroup = [x for x in cae_groups if x.Name.lower() == group_name.lower()][0]
-
-        groupItems: List[NXOpen.TaggedObject] = cae_group.GetEntities()
-        # one longer, otherwise a single element is missing from each screenshot (bug in NX)
-        groupElementLabels: List[int] = [NXOpen.CAE.BaseResultType] * (len(groupItems) + 1)
-        groupElementLabels[0] = 0
-        for i in range(len(groupItems)):
-            if isinstance(groupItems[i], NXOpen.CAE.FEElement):
-                groupElementLabels[i + 1] = (cast(NXOpen.CAE.FEElement, groupItems[i])).Label
-
-        userGroupIds: List[int] = [int] * 1
-        # This creates a "PostGroup"
-        userGroupIds[0] = the_session.Post.CreateUserGroupFromEntityLabels(postview_id, NXOpen.CAE.CaeGroupCollection.EntityType.Element, groupElementLabels) # type: ignore
-        the_session.Post.PostviewApplyUserGroupVisibility(postview_id, userGroupIds, NXOpen.CAE.Post.GroupVisibility.ShowOnly) # type: ignore
-
+        display_elements_in_group_via_postgroup(postview_id, group_name)
     else:
+        # The next function only works for Groups created in the .sim file (at least when used like this)
+        # And not for groups inherited from the fem or afem file. Also using the JournalIdentifier did not work.
+        # Therefore a workaround with a postgroup for these fem or afem groups.
         usergroups_gids = the_session.Post.PostviewGetUserGroupGids(postview_id, [group_name]) # type: ignore single string according docs
-        the_session.Post.PostviewApplyUserGroupVisibility(postview_id, usergroups_gids, NXOpen.CAE.Post.GroupVisibility.ShowOnly) # type: ignore
+        if len(usergroups_gids) == 0:
+            # the_lw.WriteFullline("Warning: group " + group_name + " is not a sim groups and is displayed through a temporaty PostGroup")
+            display_elements_in_group_via_postgroup(postview_id, group_name)
+        else:
+            the_session.Post.PostviewApplyUserGroupVisibility(postview_id, usergroups_gids, NXOpen.CAE.Post.GroupVisibility.ShowOnly) # type: ignore
 
 
 def create_annotation(postview_id: int, annotation_text: str) -> NXOpen.CAE.PostAnnotation:
@@ -440,7 +450,7 @@ def print_message() -> None:
 
 def set_camera(camera_name: str) -> None:
     sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part)
-    cameras: List[NXOpen.Display.Camera] = sim_part.Cameras
+    cameras: NXOpen.Display.CameraCollection = sim_part.Cameras
     camera: NXOpen.Display.Camera = [x for x in cameras if x.Name.lower() == camera_name.lower()][0]
     camera.ApplyToView(sim_part.ModelingViews.WorkView)
 
@@ -539,15 +549,22 @@ def read_screenshot_definitions(file_path: str) -> List[ScreenShot]:
 
 
 def delete_post_groups() -> None:
+    found_post_group: bool = False
     sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part)
     cae_groups: List[NXOpen.CAE.CaeGroup] = sim_part.CaeGroups
-    post_groups: List[NXOpen.CAE.CaeGroup] = [x for x in cae_groups if x.Name.find("PostGroup") != -1]
+    post_groups: List[NXOpen.CAE.CaeGroup] = [x for x in cae_groups if x.Name.startswith("PostGroup")]
 
     for item in post_groups:
-        the_session.UpdateManager.AddObjectsToDeleteList([cast(NXOpen.NXObject, item)])
+        # only delete the ones with a number at the end (so there is the least change of accidentily deleting an acutal user created group)
+        if item.Name[9:].isdigit():
+            the_session.UpdateManager.AddObjectsToDeleteList([cast(NXOpen.NXObject, item)])
+            found_post_group = True
     
-    undo_mark_id = the_session.SetUndoMark(NXOpen.Session.MarkVisibility.Invisible, "deletePostGroup")
-    the_session.UpdateManager.DoUpdate(undo_mark_id)
+    if found_post_group:
+        undo_mark_id = the_session.SetUndoMark(NXOpen.Session.MarkVisibility.Invisible, "deletePostGroup")
+        the_session.UpdateManager.DoUpdate(undo_mark_id)
+        the_lw.WriteFullline("Removed automatically created PostGroups")
+
 
 def main() -> None:
     the_lw.Open()
@@ -560,7 +577,7 @@ def main() -> None:
     root = tk.Tk()
     root.withdraw()
 
-    file_path = filedialog.askopenfilename()
+    file_path = filedialog.askopenfilename(title = "Select input file",filetypes = (("csv files (*.csv)","*.csv"),))
 
     if file_path == None:
         # user pressed cancel
@@ -598,11 +615,10 @@ def main() -> None:
     # load all results before the loop
     solutionResults: List[NXOpen.CAE.SolutionResult] = load_results(screenshots)
 
-    # turn off antialiasing for sharper edges
-    originalLineAntialiasing: bool = the_ui.VisualizationVisualPreferences.LineAntialiasing
-    originalFullSceneAntialiasing: bool = the_ui.VisualizationVisualPreferences.FullSceneAntialiasing
-    the_ui.VisualizationVisualPreferences.LineAntialiasing = False
-    the_ui.VisualizationVisualPreferences.FullSceneAntialiasing = False
+    # Keep track of all original CaeGroups, so the (possible) Created PostGroups can be tracked and deleted
+    # Without accidentaly deleting user groups which might start with PostGroup.
+    sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part)
+    cae_groups_original: NXOpen.CAE.CaeGroupCollection = sim_part.CaeGroups
 
     postview_id: int = -1
     # process the screenshots
@@ -655,12 +671,10 @@ def main() -> None:
         if post_annotation != None:
             post_annotation.Delete()
     
-    if nx_version == "v12":
-        delete_post_groups()
-
-    # reset the visualization setting back to original
-    the_ui.VisualizationVisualPreferences.LineAntialiasing = originalLineAntialiasing
-    the_ui.VisualizationVisualPreferences.FullSceneAntialiasing = originalFullSceneAntialiasing
+    # the following line does not contain the newly creates postgroups (contrary to C#)
+    # cae_groups: NXOpen.CAE.CaeGroupCollection = sim_part.CaeGroups
+    # Therefore deleting all created PostGroups
+    delete_post_groups()
 
     print_message()
 
