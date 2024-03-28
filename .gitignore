@@ -1,5 +1,5 @@
 # NXOpen-CAE-python specific
-
+excluded_scripts/
 
 # VSCode settings
 .vscode
