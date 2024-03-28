@@ -1,6 +1,6 @@
 # NXOpen-CAE-python
 
-This is a repository with NXOpen code for Siemens SimCenter 3D (aka NX CAE) in python.
+This is a repository with NXOpen code for Siemens Simcenter3D (aka NX CAE) in python.
 At this moment it mirrors the [C# repository](https://github.com/theScriptingEngineer/NXOpen-CAE)
 
 If you’re using my scripts in your daily work, saving you a lot of work and time, buy me a coffe so I can continue developing awesome scripts.
@@ -9,9 +9,10 @@ If you’re using my scripts in your daily work, saving you a lot of work and ti
 ## Learning NXOpen
 
 If you are interested in learning NXOpen, please check out my course on Udemy:
+[Siemens NX beginner NXOpen course (Python)](https://www.udemy.com/course/siemens-nx-beginner-nxopen-course-python/?referralCode=DEE8FAB445765802FEDC)
 [SimCenter 3D basic NXOpen course (C#)](https://www.udemy.com/course/simcenter3d-basic-nxopen-course/?referralCode=4ABC27CFD7D2C57D220B%20)
 
-**30% off with coupon code REALIZELIVE (valid till July 29th 2023)**
+**30% off with coupon code NXOPEN_PYTHON_LAUNCH (valid till April 28th 2024)**
 >Note this course is in C#, but will teach you the basics, which you can also apply to python
 >The difficulty with learning NXOpen is understanding the NX objects structure, not the language in which the code is written.
 >Moreover, Siemens advises agains using Python if you are starting with NXOpen.
@@ -25,9 +26,7 @@ While writing NXOpen code in python I found this a huge disadvantage, because du
 to know the available methods on the objects.
 Apart from an older document from siemens explaining how to get this to work with Eclipse and PyDev add-on, which only works partially, I'm not aware of any other resource to get code completion to work.
 
-This is why I created my own method (a work in progress, not perfect but still handy) which is  independent from the IDE you are using.
 This is why I created my own stub files for the NXOpen libraries. 
-
 
 ### Visual Studio Code
 
