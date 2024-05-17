@@ -215,9 +215,9 @@ def main() :
     the_lw.Open()
     the_lw.WriteFullline("Starting Main() in " + the_session.ExecutingJournal)
     
-    node_label = 2296551
-    list_nodal_values("Position0", 1, 1, "Reaction Force - Nodal", node_label)
-    list_nodal_values("Position0", 1, 1, "Reaction Moment - Nodal", node_label)
+    node_label = 16885
+    list_nodal_values("PinnedPinned", 1, 1, "Reaction Force - Nodal", node_label)
+    list_nodal_values("FixedPinned", 1, 1, "Reaction Moment - Nodal", node_label)
 
 if __name__ == '__main__':
     main()

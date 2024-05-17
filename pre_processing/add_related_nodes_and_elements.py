@@ -19,41 +19,50 @@ the_lw: NXOpen.ListingWindow = the_session.ListingWindow
 the_uf_session: NXOpen.UF.UFSession = NXOpen.UF.UFSession.GetUFSession()
 
 
-def add_related_nodes_and_elements(cae_part: NXOpen.CAE.CaePart) -> None:
-    """ This function cycles through all cae groups in a CaePart.
-    For each group it adds the related nodes and elements for the bodies and faces in the group.
-    Practical for repopulating groups after a (partial) remesh.
-    Function is idempotent.
+def add_related_nodes_and_elements(cae_part: NXOpen.CAE.CaePart):
+    """This function cycles through all cae groups in a CaePart.
+       For each group it adds the related nodes and elements for the bodies and faces in the group.
+       Practical for repopulating groups after a (partial) remesh.
+       Function is idempotent.
 
     Parameters
     ----------
-    cae_part: NXOpen.CAE.CaePart
+    fem_part: NXOpen.CAE.FemPart
         The CaePart to perform this operation on.
+    
+    Notes
+    -----
+    Tested in SC2306
     """
-    cae_groups: List[NXOpen.CAE.CaeGroupCollection] = cae_part.CaeGroups
-    for group in cae_groups: # a CaeGroupCollection is iterable. # type: ignore
+    cae_groups: List[NXOpen.CAE.CaeGroup] = cae_part.CaeGroups
+    for group in cae_groups: # type: ignore
         the_lw.WriteFullline("Processing group " + group.Name)
         seeds_body: List[NXOpen.CAE.CAEBody] = []
         seeds_face: List[NXOpen.CAE.CAEFace] = []
 
         for tagged_object in group.GetEntities():
-            if isinstance(tagged_object, NXOpen.CAE.CAEBody):
+            if type(tagged_object) is NXOpen.CAE.CAEBody:
                 seeds_body.append(cast(NXOpen.CAE.CAEBody, tagged_object))
-            elif isinstance(tagged_object, NXOpen.CAE.CAEFace):
+            
+            elif type(tagged_object) is NXOpen.CAE.CAEFace:
                 seeds_face.append(cast(NXOpen.CAE.CAEFace, tagged_object))
 
         smart_selection_manager: NXOpen.CAE.SmartSelectionManager = cae_part.SmartSelectionMgr
 
-        related_elem_method: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedElemMethod(seeds_body, False)
-        related_node_method: NXOpen.CAE.RelatedNodeMethod = smart_selection_manager.CreateRelatedNodeMethod(seeds_body, False)
-    
-        group.AddEntities(related_elem_method.GetElements())
-        group.AddEntities(related_node_method.GetNodes())
+        related_element_method_body: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedElemMethod(seeds_body, False)
+        # related_node_method_body: NXOpen.CAE.RelatedNodeMethod = smart_selection_manager.CreateNewRelatedNodeMethodFromBody(seeds_body, False)
+        # For NX version 2007 (release 2022.1) and later
+        related_node_method_body: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateNewRelatedNodeMethodFromBodies(seeds_body, False, False)
 
-        related_elem_method_face: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedElemMethod(seeds_face, False)
-        related_node_method_face: NXOpen.CAE.RelatedNodeMethod = smart_selection_manager.CreateRelatedNodeMethod(seeds_face, False)
-    
-        group.AddEntities(related_elem_method_face.GetElements())
+        group.AddEntities(related_element_method_body.GetElements())
+        group.AddEntities(related_node_method_body.GetNodes())
+
+        related_element_method_face: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedElemMethod(seeds_face, False)
+        # related_node_method_face: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedNodeMethod(seeds_face, False)
+        # For NX version 2007 (release 2022.1) and later
+        related_node_method_face: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateNewRelatedNodeMethodFromFaces(seeds_face, False, False)
+
+        group.AddEntities(related_element_method_face.GetElements())
         group.AddEntities(related_node_method_face.GetNodes())
 
 

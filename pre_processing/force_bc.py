@@ -8,8 +8,41 @@ the_session = NXOpen.Session.GetSession()
 base_part: NXOpen.BasePart = the_session.Parts.BaseWork
 the_lw: NXOpen.ListingWindow = the_session.ListingWindow
 
-def CreateConstraint(node_label: int, dx: float, dy : float, dz: float, rx: float, ry: float, rz: float, constraint_name: str):
+def create_nodal_constraint(node_label: int, dx: float, dy : float, dz: float, rx: float, ry: float, rz: float, constraint_name: str) -> NXOpen.CAE.SimBC:
+    """This function creates a constraint on a node. For free, set the value to -777777
+        THis is minus 7, six times. Which equals 42 ;) You got to love the NX developers humor.
+    
+    Parameters
+    ----------
+    node_label: int
+        The node label to appy the constraint to.
+    dx: float
+        the displacement in global x-direction.
+    dy: float
+        the displacement in global y-direction.
+    dz: float
+        the displacement in global z-direction.
+    rx: float
+        the rotation in global x-direction.
+    ry: float
+        the rotation in global y-direction.
+    rz: float
+        the rotation in global z-direction.
+    constraint_name: str
+        The name of the constraint for the GUI.
+
+    Returns
+    -------
+    NXOpen.CAE.SimBC
+        Returns the created constraint.
+
+    Notes
+    -----
+    Tested in SC2212
+
+    """
     # check if started from a SimPart, returning othwerwise
+    base_part: NXOpen.BasePart = the_session.Parts.BaseWork
     if not isinstance(base_part, NXOpen.CAE.SimPart):
         the_lw.WriteFullline("CreateConstraint needs to start from a .sim file. Exiting")
         return
@@ -21,15 +54,18 @@ def CreateConstraint(node_label: int, dx: float, dy : float, dz: float, rx: floa
     sim_simulation.ActiveSolution = NXOpen.CAE.SimSolution.Null
 
     # check if constaint already exists
-    sim_constraints: List[NXOpen.CAE.SimConstraint] = sim_simulation.Constraints
-    sim_constraint: NXOpen.CAE.SimConstraint = [item for item in sim_constraints if item.Name.lower() == constraint_name.lower()]
+    sim_constraints: List[NXOpen.CAE.SimConstraint] = [item for item in sim_simulation.Constraints]
+    sim_constraint: List[NXOpen.CAE.SimConstraint] = [item for item in sim_constraints if item.Name.lower() == constraint_name.lower()]
     sim_bc_builder: NXOpen.CAE.SimBCBuilder
-    if len(sim_constraint == 0):
+    if len(sim_constraint) == 0:
         # no constraint with the given name, thus creating the constrain
         sim_bc_builder = sim_simulation.CreateBcBuilderForConstraintDescriptor("UserDefinedDisplacementConstraint", constraint_name, 0)
+    elif len(sim_constraint) == 1:
+        the_lw.WriteFullline(f'A constraint with the name {constraint_name} already exists therefore editing the constraint.')
+        sim_bc_builder = sim_simulation.CreateBcBuilderForBc(sim_constraint[0])
     else:
-        # a constraint with the given name already exists therefore editing the constraint
-        sim_bc_builder = sim_simulation.CreateBcBuilderForBc(sim_constraint)
+        the_lw.WriteFullline(f'Multiple constraints with the name {constraint_name} exist. This function requires unique names and is not case sensitive.')
+        raise ValueError(f'Multiple constraints with the name {constraint_name} exist.')
 
     property_table: NXOpen.CAE.PropertyTable = sim_bc_builder.PropertyTable
     field_expression1: NXOpen.Fields.FieldExpression = property_table.GetScalarFieldPropertyValue("DOF1")
@@ -62,7 +98,7 @@ def CreateConstraint(node_label: int, dx: float, dy : float, dz: float, rx: floa
     property_table.SetScalarFieldPropertyValue("DOF5", field_expression5)
 
     indep_var_array6: List[NXOpen.Fields.FieldVariable] = []
-    field_expression6.EditFieldExpression(str(rx), unit_degrees, indep_var_array6, False)
+    field_expression6.EditFieldExpression(str(rz), unit_degrees, indep_var_array6, False)
     property_table.SetScalarFieldPropertyValue("DOF6", field_expression6)
 
     # select the node via the label to assign the constraint to
@@ -85,7 +121,6 @@ def CreateConstraint(node_label: int, dx: float, dy : float, dz: float, rx: floa
     sim_bc_builder.Destroy()
     
     return sim_bc
-
 def create_nodal_force_default_name(node_label: int, fx: float, fy : float, fz: float):
     defaultName: str = "Nodalforce_" + str(node_label)
     create_nodal_force(node_label, fx, fy, fz, defaultName)
@@ -158,33 +193,61 @@ def main() :
     the_lw.Open()
     the_lw.WriteFullline("Starting Main() in " + the_session.ExecutingJournal)
 
-    create_nodal_force(1871, 0, 0, -9810, "DeckLoadPS1")
-    create_nodal_force(1948, 0, 0, -9810, "DeckLoadPS2")
-    create_nodal_force(1908, 0, 0, -9810, "DeckLoadPS3")
+    # create_nodal_force(1871, 0, 0, -9810, "DeckLoadPS1")
+    # create_nodal_force(1948, 0, 0, -9810, "DeckLoadPS2")
+    # create_nodal_force(1908, 0, 0, -9810, "DeckLoadPS3")
 
-    create_nodal_force(1870, 0, 0, -9810, "DeckLoadSB1")
-    create_nodal_force(1938, 0, 0, -9810, "DeckLoadSB2")
-    create_nodal_force(1907, 0, 0, -9810, "DeckLoadSB3")
+    # create_nodal_force(1870, 0, 0, -9810, "DeckLoadSB1")
+    # create_nodal_force(1938, 0, 0, -9810, "DeckLoadSB2")
+    # create_nodal_force(1907, 0, 0, -9810, "DeckLoadSB3")
 
-    create_nodal_force(1882, 0, 0, -9810, "DeckLoadCenter1")
-    create_nodal_force(1927, 0, 0, -9810, "DeckLoadCenter2")
-    create_nodal_force(1918, 0, 0, -9810, "DeckLoadCenter3")
+    # create_nodal_force(1882, 0, 0, -9810, "DeckLoadCenter1")
+    # create_nodal_force(1927, 0, 0, -9810, "DeckLoadCenter2")
+    # create_nodal_force(1918, 0, 0, -9810, "DeckLoadCenter3")
 
-    create_nodal_force(3810, 0, 0, 9810, "BottomLoadPS1")
-    create_nodal_force(3692, 0, 0, 9810, "BottomLoadPS2")
-    create_nodal_force(3739, 0, 0, 9810, "BottomLoadPS3")
+    # create_nodal_force(3810, 0, 0, 9810, "BottomLoadPS1")
+    # create_nodal_force(3692, 0, 0, 9810, "BottomLoadPS2")
+    # create_nodal_force(3739, 0, 0, 9810, "BottomLoadPS3")
 
-    create_nodal_force(3649, 0, 0, 9810, "BottomLoadSB1")
-    create_nodal_force(3684, 0, 0, 9810, "BottomLoadSB2")
-    create_nodal_force(3710, 0, 0, 9810, "BottomLoadSB3")
+    # create_nodal_force(3649, 0, 0, 9810, "BottomLoadSB1")
+    # create_nodal_force(3684, 0, 0, 9810, "BottomLoadSB2")
+    # create_nodal_force(3710, 0, 0, 9810, "BottomLoadSB3")
 
-    create_nodal_force(3773, 0, 0, 9810, "BottomLoadCenter1")
-    create_nodal_force(3668, 0, 0, 9810, "BottomLoadCenter2")
-    create_nodal_force(3705, 0, 0, 9810, "BottomLoadCenter3")
+    # create_nodal_force(3773, 0, 0, 9810, "BottomLoadCenter1")
+    # create_nodal_force(3668, 0, 0, 9810, "BottomLoadCenter2")
+    # create_nodal_force(3705, 0, 0, 9810, "BottomLoadCenter3")
 
-    CreateConstraint(1969, 0, 0, 0, -777777, -777777, -777777, "XYZ_Fixed")
-    CreateConstraint(2010, -777777, 0, 0, -777777, -777777, -777777, "YZ_Fixed")
-    CreateConstraint(2012, -777777, -777777, 0, -777777, -777777, -777777, "Z_Fixed")
+    # create_nodal_constraint(1969, 0, 0, 0, -777777, -777777, -777777, "XYZ_Fixed")
+    # create_nodal_constraint(2010, -777777, 0, 0, -777777, -777777, -777777, "YZ_Fixed")
+    # create_nodal_constraint(2012, -777777, -777777, 0, -777777, -777777, -777777, "Z_Fixed")
+
+    create_nodal_force(20232, 0, 0, -9810, "DeckLoadPS1")
+    create_nodal_force(20232, 0, 0, -9810, "DeckLoadPS2")
+    create_nodal_force(20232, 0, 0, -9810, "DeckLoadPS3")
+
+    create_nodal_force(20232, 0, 0, -9810, "DeckLoadSB1")
+    create_nodal_force(20232, 0, 0, -9810, "DeckLoadSB2")
+    create_nodal_force(20232, 0, 0, -9810, "DeckLoadSB3")
+
+    create_nodal_force(20232, 0, 0, -9810, "DeckLoadCenter1")
+    create_nodal_force(20232, 0, 0, -9810, "DeckLoadCenter2")
+    create_nodal_force(20232, 0, 0, -9810, "DeckLoadCenter3")
+
+    create_nodal_force(20232, 0, 0, 9810, "BottomLoadPS1")
+    create_nodal_force(20232, 0, 0, 9810, "BottomLoadPS2")
+    create_nodal_force(20232, 0, 0, 9810, "BottomLoadPS3")
+
+    create_nodal_force(20232, 0, 0, 9810, "BottomLoadSB1")
+    create_nodal_force(20232, 0, 0, 9810, "BottomLoadSB2")
+    create_nodal_force(20232, 0, 0, 9810, "BottomLoadSB3")
+
+    create_nodal_force(20232, 0, 0, 9810, "BottomLoadCenter1")
+    create_nodal_force(20232, 0, 0, 9810, "BottomLoadCenter2")
+    create_nodal_force(20232, 0, 0, 9810, "BottomLoadCenter3")
+
+    create_nodal_constraint(30203, 0, 0, 0, -777777, -777777, -777777, "XYZ_Fixed")
+    create_nodal_constraint(32963, -777777, 0, 0, -777777, -777777, -777777, "YZ_Fixed")
+    create_nodal_constraint(32964, -777777, -777777, 0, -777777, -777777, -777777, "Z_Fixed")
     
 if __name__ == '__main__':
     main()

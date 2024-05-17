@@ -8,16 +8,16 @@ import sys
 import os
 import subprocess
 import NXOpen
+import NXOpen.UF
 import NXOpen.CAE
 from typing import List, cast, Optional, Union
 
 the_session: NXOpen.Session = NXOpen.Session.GetSession()
 the_uf_session: NXOpen.UF.UFSession = NXOpen.UF.UFSession.GetUFSession()
-base_part = the_session.Parts.BaseWork
 the_lw: NXOpen.ListingWindow = the_session.ListingWindow
 
 
-def solve_solution(solution_name: str):
+def solve_solution(solution_name: str, sim_part: NXOpen.CAE.SimPart = None):
     """This function solves a solution with the given name, in the active sim file
 
     Parameters
@@ -26,10 +26,12 @@ def solve_solution(solution_name: str):
         Name of the solution to solve
     """
     the_lw.WriteFullline("Solving " + solution_name)
-    sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part)
+    if sim_part == None:
+        # get the active part
+        sim_part = cast(NXOpen.CAE.SimPart, the_session.Parts.BaseWork)
 
     # get the requested solution
-    sim_solutions: List[NXOpen.CAE.SimSolution] = sim_part.Simulation.Solutions.ToArray()
+    sim_solutions: List[NXOpen.CAE.SimSolution] = sim_part.Simulation.Solutions
     sim_solution: List[NXOpen.CAE.SimSolution] = [item for item in sim_solutions if item.Name.lower() == solution_name.lower()]
     if sim_solution == None:
         the_lw.WriteFullline("Solution with name " + solution_name + " could not be found in " + sim_part.FullPath)
@@ -45,16 +47,15 @@ def solve_solution(solution_name: str):
 
     # user feedback
     the_lw.WriteFullline("Solved solution " + solution_name)
-    sim_solve_manager.SolveChainOfSolutions(chain, NXOpen.CAE.SimSolution.SolveOption.Solve, NXOpen.CAE.SimSolution.SetupCheckOption.DoNotCheck, NXOpen.CAE.SimSolution.SolveMode.Foreground)
+
 
 def solve_all_solutions():
     """This function solves all solutions in the active sim file
     """
     # Note: don't loop over the solutions and solve. This will give a memory access violation error, but will still solve.
-    # The error can be avoided by making the simSolveManager a global variable, so it's not on each call.
     the_lw.WriteFullline("Solving all solutions:")
     sim_solve_manager: NXOpen.CAE.SimSolveManager = NXOpen.CAE.SimSolveManager.GetSimSolveManager(the_session)
-    sim_solve_manager.SolveAllSolutions(NXOpen.CAE.SimSolution.SolveOption.Solve, NXOpen.CAE.SimSolution.SetupCheckOption.DoNotCheck, NXOpen.CAE.SimSolution.SolveMode.Foreground)
+    sim_solve_manager.SolveAllSolutions(NXOpen.CAE.SimSolution.SolveOption.Solve, NXOpen.CAE.SimSolution.SetupCheckOption.DoNotCheck, NXOpen.CAE.SimSolution.SolveMode.Foreground, False)
 
 
 def solve_dat_file(dat_file: str):
@@ -124,6 +125,12 @@ def main():
     the_lw.Open()
     the_lw.WriteFullline("Starting Main() in " + the_session.ExecutingJournal)
 
+    if the_session.IsBatch:
+        the_lw.WriteFullline("This journal gives a memory access violation error when running in batch mode.")
+        the_lw.WriteFullline("It is not clear why this happens, so the journal will exit.")
+        the_lw.WriteFullline("Please run this journal in interactive mode, or use the C# version.")
+        return
+
     if len(sys.argv) == 1:
         # no arguments passed
         # write some sort of a help
@@ -133,27 +140,43 @@ def main():
         return
 
     # designed to run in batch, so need to open the file.
-    # open file using the first argument
-    file_name: str = sys.argv[1] # index 0 is the name of the python file itself
-    the_lw.WriteFullline("Opening file " + file_name)
-    try:
-        base_part = the_session.Parts.OpenActiveDisplay(filename, NXOpen.DisplayPartOption.ReplaceExisting)
-    except:
-        the_lw.WriteFullline("The file " + file_name + " could not be opened!")
-        return
+    if the_session.IsBatch:
+        # open file using the first argument
+        file_name: str = sys.argv[1] # index 0 is the name of the python file itself
+        the_lw.WriteFullline("Opening file " + file_name)
+        try:
+            
+            base_part, load_status = the_session.Parts.Open(file_name) # in python, open returns a tuple with the part and the status
+        except Exception as e:
+            the_lw.WriteFullline("The file " + file_name + " could not be opened!")
+            the_lw.WriteFullline(str(e))
+            return
+    else:
+        base_part = the_session.Parts.BaseWork
 
     # check if running from a sim part
-    if not isinstance(NXOpen.CAE.SimPart, base_part):
+    if not isinstance(base_part, NXOpen.CAE.SimPart):
         the_lw.WriteFullline("SolveSolution needs to start from a .sim file")
         return
+    
+    sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part)
 
-    if len(sys.argv) == 2:
-        # only one argument (file to open) so solve all solutions
-        solve_all_solutions()
+    if the_session.IsBatch:
+        if len(sys.argv) == 2:
+            # only one argument (file to open) so solve all solutions
+            solve_all_solutions()
+        else:
+            for i in range(2, len(sys.argv)):
+                # 2 or more arguments. Solve the solution for each argument. (skip arg[1] becasue that's the sim file)
+                solve_solution(sys.argv[i], sim_part)
     else:
-        for i in range(2, len(sys.argv)):
-            # 2 or more arguments. Solve the solution for each argument. (skip arg[1] becasue that's the sim file)
-            solve_solution(sys.argv[i])
+        if len(sys.argv) == 2:
+            # only one argument (file to open) so solve all solutions
+            solve_all_solutions()
+        else:
+            for i in range(2, len(sys.argv)):
+                # 2 or more arguments. Solve the solution for each argument. (skip arg[1] becasue that's the sim file)
+                solve_solution(sys.argv[i], sim_part)
 
 
 if __name__ == '__main__':
