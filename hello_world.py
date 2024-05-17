@@ -7,6 +7,7 @@ import NXOpen
 
 the_session: NXOpen.Session = NXOpen.Session.GetSession()
 base_part: NXOpen.BasePart = the_session.Parts.BaseWork
+work_part: NXOpen.Part = the_session.Parts.Work
 the_lw: NXOpen.ListingWindow = the_session.ListingWindow
 
 

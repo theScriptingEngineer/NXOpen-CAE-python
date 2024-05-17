@@ -29,6 +29,10 @@ def add_related_nodes_and_elements(cae_part: NXOpen.CAE.CaePart):
     ----------
     fem_part: NXOpen.CAE.FemPart
         The CaePart to perform this operation on.
+    
+    Notes
+    -----
+    Tested in SC2306
     """
     cae_groups: List[NXOpen.CAE.CaeGroup] = cae_part.CaeGroups
     for group in cae_groups: # type: ignore
@@ -47,7 +51,7 @@ def add_related_nodes_and_elements(cae_part: NXOpen.CAE.CaePart):
 
         related_element_method_body: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedElemMethod(seeds_body, False)
         # related_node_method_body: NXOpen.CAE.RelatedNodeMethod = smart_selection_manager.CreateNewRelatedNodeMethodFromBody(seeds_body, False)
-        # comment previous line and uncomment next line for NX version 2007 (release 2022.1) and later
+        # For NX version 2007 (release 2022.1) and later
         related_node_method_body: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateNewRelatedNodeMethodFromBodies(seeds_body, False, False)
 
         group.AddEntities(related_element_method_body.GetElements())
@@ -55,7 +59,7 @@ def add_related_nodes_and_elements(cae_part: NXOpen.CAE.CaePart):
 
         related_element_method_face: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedElemMethod(seeds_face, False)
         # related_node_method_face: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedNodeMethod(seeds_face, False)
-        # comment previous line and uncomment next line for NX version 2007 (release 2022.1) and later
+        # For NX version 2007 (release 2022.1) and later
         related_node_method_face: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateNewRelatedNodeMethodFromFaces(seeds_face, False, False)
 
         group.AddEntities(related_element_method_face.GetElements())
