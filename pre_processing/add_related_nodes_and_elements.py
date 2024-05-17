@@ -29,6 +29,10 @@ def add_related_nodes_and_elements(cae_part: NXOpen.CAE.CaePart) -> None:
     ----------
     cae_part: NXOpen.CAE.CaePart
         The CaePart to perform this operation on.
+    
+    Notes
+    -----
+    Tested in SC2306
     """
     cae_groups: List[NXOpen.CAE.CaeGroupCollection] = cae_part.CaeGroups
     for group in cae_groups: # a CaeGroupCollection is iterable. # type: ignore
@@ -44,16 +48,20 @@ def add_related_nodes_and_elements(cae_part: NXOpen.CAE.CaePart) -> None:
 
         smart_selection_manager: NXOpen.CAE.SmartSelectionManager = cae_part.SmartSelectionMgr
 
-        related_elem_method: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedElemMethod(seeds_body, False)
-        related_node_method: NXOpen.CAE.RelatedNodeMethod = smart_selection_manager.CreateRelatedNodeMethod(seeds_body, False)
-    
-        group.AddEntities(related_elem_method.GetElements())
-        group.AddEntities(related_node_method.GetNodes())
+        related_element_method_body: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedElemMethod(seeds_body, False)
+        # related_node_method_body: NXOpen.CAE.RelatedNodeMethod = smart_selection_manager.CreateNewRelatedNodeMethodFromBody(seeds_body, False)
+        # For NX version 2007 (release 2022.1) and later
+        related_node_method_body: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateNewRelatedNodeMethodFromBodies(seeds_body, False, False)
 
-        related_elem_method_face: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedElemMethod(seeds_face, False)
-        related_node_method_face: NXOpen.CAE.RelatedNodeMethod = smart_selection_manager.CreateRelatedNodeMethod(seeds_face, False)
-    
-        group.AddEntities(related_elem_method_face.GetElements())
+        group.AddEntities(related_element_method_body.GetElements())
+        group.AddEntities(related_node_method_body.GetNodes())
+
+        related_element_method_face: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedElemMethod(seeds_face, False)
+        # related_node_method_face: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateRelatedNodeMethod(seeds_face, False)
+        # For NX version 2007 (release 2022.1) and later
+        related_node_method_face: NXOpen.CAE.RelatedElemMethod = smart_selection_manager.CreateNewRelatedNodeMethodFromFaces(seeds_face, False, False)
+
+        group.AddEntities(related_element_method_face.GetElements())
         group.AddEntities(related_node_method_face.GetNodes())
 
 
