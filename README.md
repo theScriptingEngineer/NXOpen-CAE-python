@@ -9,7 +9,9 @@ If you’re using my scripts in your daily work, saving you a lot of work and ti
 ## Learning NXOpen
 
 If you are interested in learning NXOpen, please check out my course on Udemy:
+
 [Siemens NX beginner NXOpen course (Python)](https://www.udemy.com/course/siemens-nx-beginner-nxopen-course-python/?referralCode=DEE8FAB445765802FEDC)
+
 [SimCenter 3D basic NXOpen course (C#)](https://www.udemy.com/course/simcenter3d-basic-nxopen-course/?referralCode=4ABC27CFD7D2C57D220B%20)
 
 **30% off with coupon code NXOPEN_PYTHON_LAUNCH (valid till April 28th 2024)**

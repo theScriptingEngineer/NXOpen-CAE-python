@@ -25,6 +25,7 @@ def add_solver_set_to_subcase(solution_name: str, subcase_name: str, solver_set_
         The name of the solver set to add.
     """
     # check if started from a SimPart, returning othwerwise
+    base_part: NXOpen.BasePart = the_session.Parts.BaseWork
     if not isinstance(base_part, NXOpen.CAE.SimPart):
         the_lw.WriteFullline("AddSolverSetToSubcase needs to start from a .sim file. Exiting")
         return
@@ -63,6 +64,7 @@ def add_solver_set_to_subcase(solution_name: str, subcase_name: str, solver_set_
     # simLoadGroup: NXOpen.CAE.SimLoadGroup = cast(NXOpen.CAE.SimLoadGroup, simBcGroups[0])
     simLoad_group.AddLoadSet(sim_load_set[0])
 
+
 def add_load_to_solver_set(solver_set_name: str, load_name: str) -> None:
     """This function adds a load with a given name to a SolverSet with a given name.
 
@@ -74,6 +76,7 @@ def add_load_to_solver_set(solver_set_name: str, load_name: str) -> None:
         The name of the load to add to the solver set.
     """
     # check if started from a SimPart, returning othwerwise
+    base_part: NXOpen.BasePart = the_session.Parts.BaseWork
     if not isinstance(base_part, NXOpen.CAE.SimPart):
         the_lw.WriteFullline("AddLoadToSolverSet needs to start from a .sim file. Exiting")
         return
@@ -116,6 +119,7 @@ def create_solver_set(solver_set_name: str) -> Optional[NXOpen.CAE.SimLoadSet]:
         Returns the created solver set if created. None otherwise
     """
     # check if started from a SimPart, returning othwerwise
+    base_part: NXOpen.BasePart = the_session.Parts.BaseWork
     if not isinstance(base_part, NXOpen.CAE.SimPart):
         the_lw.WriteFullline("CreateSolverSet needs to start from a .sim file. Exiting")
         return
@@ -152,8 +156,9 @@ def add_load_to_subcase(solution_name: str, subcase_name: str, load_name: str) -
         The name of the load to add
     """
     # check if started from a SimPart, returning othwerwise
+    base_part: NXOpen.BasePart = the_session.Parts.BaseWork
     if not isinstance(base_part, NXOpen.CAE.SimPart):
-        the_lw.WriteFullline("AddLoadToSubcase needs to start from a .sim file. Exiting")
+        the_lw.WriteFullline("add_load_to_subcase needs to start from a .sim file. Exiting")
         return
     # we are now sure that basePart is a SimPart
     sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part) # explicit casting makes it clear
@@ -163,7 +168,7 @@ def add_load_to_subcase(solution_name: str, subcase_name: str, load_name: str) -
     sim_solution: NXOpen.CAE.SimSolution = get_solution(solution_name)
     if sim_solution == None:
         # Solution not found
-        the_lw.WriteFullline("AddLoadToSubcase: Solution with name " + solution_name + " not found!")
+        the_lw.WriteFullline("add_load_to_subcase: Solution with name " + solution_name + " not found!")
         return
     
     # check if the subcase exists in the given solution
@@ -174,14 +179,14 @@ def add_load_to_subcase(solution_name: str, subcase_name: str, load_name: str) -
             sim_solution_step = sim_solution.GetStepByIndex(i)
     
     if sim_solution_step == None:
-        the_lw.WriteFullline("AddLoadToSubcase: subcase with name " + subcase_name + " not found in solution " + solution_name + "!")
+        the_lw.WriteFullline("add_load_to_subcase: subcase with name " + subcase_name + " not found in solution " + solution_name + "!")
         return
 
     # get the requested load if it exists
     sim_load: List[NXOpen.CAE.SimLoad] = [item for item in sim_simulation.Loads if item.Name.lower() == load_name.lower()]
     if len(sim_load) == 0:
         # Load not found
-        the_lw.WriteFullline("AddLoadToSubcase: Load with name " + load_name + " not found!")
+        the_lw.WriteFullline("add_load_to_subcase: Load with name " + load_name + " not found!")
         return
     
     sim_solution_step.AddBc(sim_load[0])
@@ -196,8 +201,13 @@ def add_constraint_to_solution(solution_name: str, constraint_name: str) -> None
         The name of the solution to add the constraint to
     constraint_name: str
         The name of the constraint to add
+
+    Notes
+    -----
+    Tested in SC2212
     """
     # check if started from a SimPart, returning othwerwise
+    base_part: NXOpen.BasePart = the_session.Parts.BaseWork
     if not isinstance(base_part, NXOpen.CAE.SimPart):
         the_lw.WriteFullline("AddConstraintToSolution needs to start from a .sim file. Exiting")
         return
@@ -213,14 +223,75 @@ def add_constraint_to_solution(solution_name: str, constraint_name: str) -> None
         return
 
     # get the requested Constraint if it exists
-    sim_constraint: List[NXOpen.CAE.SimSolution] = [item for item in sim_simulation.Solutions if item.Name.lower() == solution_name.lower()]
+    sim_constraints: List[NXOpen.CAE.SimConstraint] = [item for item in sim_simulation.Constraints]
+    sim_constraint: List[NXOpen.CAE.SimConstraint] = [item for item in sim_constraints if item.Name.lower() == constraint_name.lower()]
     if len(sim_constraint) == 0:
         # Constraint with the given name not found
         the_lw.WriteFullline("AddConstraintToSolution: constraint with name " + constraint_name + " not found!")
         return
 
     # add constraint to solution
-    sim_solution[0].AddBc(sim_constraint[0])
+    sim_solution.AddBc(sim_constraint[0])
+
+
+def add_constraint_to_subcase(solution_name: str, subcase_name, constraint_name: str) -> None:
+    """This function adds a constraint with the given name to subcase witht he given name within the solution with the given name.
+    
+    Parameters
+    ----------
+    solution_name: str
+        The name of the solution to add the constraint to
+    subcase_name: str
+        The name of the subcase within the solution to add the constraint to
+    constraint_name: str
+        The name of the constraint to add
+
+    Notes
+    -----
+    Tested in SC2212
+    """
+    # check if started from a SimPart, returning othwerwise
+    base_part: NXOpen.BasePart = the_session.Parts.BaseWork
+    if not isinstance(base_part, NXOpen.CAE.SimPart):
+        the_lw.WriteFullline(add_constraint_to_subcase.__name__ + " needs to start from a .sim file. Exiting")
+        return
+    # we are now sure that basePart is a SimPart
+    sim_sart: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part) # explicit casting makes it clear
+    sim_simulation: NXOpen.CAE.SimSimulation = sim_sart.Simulation
+
+    # get the requested solution if it exists
+    sim_solution: NXOpen.CAE.SimSolution = get_solution(solution_name)
+    if sim_solution == None:
+        # Solution with the given name not found
+        the_lw.WriteFullline(add_constraint_to_subcase.__name__ + ": Solution with name " + solution_name + " not found!")
+        return
+
+    # check if the subcase exists in the given solution
+    sim_solution_step: Optional[NXOpen.CAE.SimSolutionStep] = None
+    for i in range(sim_solution.StepCount):
+        if sim_solution.GetStepByIndex(i).Name.lower() == subcase_name.lower():
+            # subcase exists
+            sim_solution_step = sim_solution.GetStepByIndex(i)
+    
+    if sim_solution_step == None:
+        the_lw.WriteFullline(add_constraint_to_subcase.__name__ + ": subcase with name " + subcase_name + " not found in solution " + solution_name + "!")
+        return
+
+    # get the requested Constraint if it exists
+    sim_constraints: List[NXOpen.CAE.SimConstraint] = [item for item in sim_simulation.Constraints]
+    sim_constraint: List[NXOpen.CAE.SimConstraint] = [item for item in sim_constraints if item.Name.lower() == constraint_name.lower()]
+    if len(sim_constraint) == 0:
+        # Constraint with the given name not found
+        the_lw.WriteFullline(add_constraint_to_subcase.__name__ + ": constraint with name " + constraint_name + " not found!")
+        return
+
+    # add constraint to solution
+    try:
+        # don't know how to check for constraintgroup, so just try to create it
+        sim_solution_step.CreateConstraintGroup()
+    except:
+        pass
+    sim_solution_step.AddBc(sim_constraint[0])
 
 
 def create_subcase(solution_name: str, subcase_name: str) -> Optional[NXOpen.CAE.SimSolutionStep]:
@@ -238,13 +309,17 @@ def create_subcase(solution_name: str, subcase_name: str) -> Optional[NXOpen.CAE
     -------
     NXOpen.CAE.SimSolutionStep or None
         Returns the created subcase if created. None otherwise
+
+    Notes
+    -----
+    Tested in SC2212
+
     """
     # check if started from a SimPart, returning othwerwise
+    base_part: NXOpen.BasePart = the_session.Parts.BaseWork
     if not isinstance(base_part, NXOpen.CAE.SimPart):
         the_lw.WriteFullline("CreateSubcase needs to start from a .sim file. Exiting")
         return
-    # we are now sure that basePart is a SimPart
-    sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part) # explicit casting makes it clear
 
     # get the requested solution if it exists
     sim_solution: NXOpen.CAE.SimSolution = get_solution(solution_name)
@@ -258,10 +333,11 @@ def create_subcase(solution_name: str, subcase_name: str) -> Optional[NXOpen.CAE
         if sim_solution.GetStepByIndex(i).Name.lower() == subcase_name.lower():
             # subcase already exists
             the_lw.WriteFullline("CreateSubcase: subcase with name " + subcase_name + " already exists in solution " + solution_name + "!")
+            the_lw.WriteFullline("Proceeding with the existing one.")
             return sim_solution.GetStepByIndex(i)
     
     # create the subcase with the given name but don't activate it
-    return sim_solution[0].CreateStep(0, False, subcase_name)
+    return sim_solution.CreateStep(0, False, subcase_name)
 
 
 def create_solution(solution_name: str, output_requests: str = "Structural Output Requests1", bulk_data_echo_request: str = "Bulk Data Echo Request1") -> Optional[NXOpen.CAE.SimSolution]:
@@ -282,8 +358,14 @@ def create_solution(solution_name: str, output_requests: str = "Structural Outpu
     -------
     NXOpen.CAE.SimSolution or None
         Returns the created subcase if created. The existing one with this name and updated if it exists
+    
+    Notes
+    -----
+    Tested with only solution name in SC2212.
+
     """
     # check if started from a SimPart, returning othwerwise
+    base_part: NXOpen.BasePart = the_session.Parts.BaseWork
     if not isinstance(base_part, NXOpen.CAE.SimPart):
         the_lw.WriteFullline("CreateSolution needs to start from a .sim file. Exiting")
         return
@@ -311,7 +393,7 @@ def create_solution(solution_name: str, output_requests: str = "Structural Outpu
             # default does also not exist. Create it
             bulk_data_property_table = sim_part.ModelingObjectPropertyTables.CreateModelingObjectPropertyTable("Bulk Data Echo Request", "NX NASTRAN - Structural", "NX NASTRAN", "Bulk Data Echo Request1", 1000)
 
-    property_table.SetNamedPropertyTablePropertyValue("Bulk Data Echo Request", bulk_data_property_table)
+    property_table.SetNamedPropertyTablePropertyValue("Bulk Data Echo Request", bulk_data_property_table[0])
 
     # Look for a ModelingObjectPropertyTable with the given name or the default name "Structural Output Requests1"
     output_requests_property_table: List[NXOpen.CAE.ModelingObjectPropertyTable] = [item for item in sim_part.ModelingObjectPropertyTables if item.Name.lower() == output_requests.lower()]
@@ -327,7 +409,7 @@ def create_solution(solution_name: str, output_requests: str = "Structural Outpu
             output_requests_property_table.PropertyTable.SetIntegerPropertyValue("Stress - Location", 1)
 
 
-    property_table.SetNamedPropertyTablePropertyValue("Output Requests", output_requests_property_table)
+    property_table.SetNamedPropertyTablePropertyValue("Output Requests", output_requests_property_table[0])
 
     return sim_solution
 
@@ -346,9 +428,15 @@ def get_solution(solution_name: str) -> Union[NXOpen.CAE.SimSolution, None]:
     NXOpen.CAE.SimSolution or None
         The FIRST solution object with the given name if found, None otherwise
     """
+    # check if started from a SimPart, returning othwerwise
+    base_part: NXOpen.BasePart = the_session.Parts.BaseWork
+    if not isinstance(base_part, NXOpen.CAE.SimPart):
+        the_lw.WriteFullline("get_solution needs to start from a .sim file. Exiting")
+        return
+
     sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part) # explicit casting makes it clear
     sim_simulation = sim_part.Simulation
-    sim_solutions: List[NXOpen.CAE.SimSolution] = sim_simulation.Solutions.ToArray()
+    sim_solutions: List[NXOpen.CAE.SimSolution] = [item for item in sim_simulation.Solutions] # no .ToArray() in python
 
     sim_solution: List[NXOpen.CAE.SimSolution] = [item for item in sim_solutions if item.Name.lower() == solution_name.lower()]
     if len(sim_solution) == 0:
@@ -363,7 +451,7 @@ def main() :
     the_lw.Open()
     the_lw.WriteFullline("Starting Main() in " + the_session.ExecutingJournal)
 
-    mySolution: NXOpen.CAE.SimSolution = get_solution("SolutionName")
+    mySolution: NXOpen.CAE.SimSolution = get_solution("PinnedPinned")
 
     create_solver_set("DeckLoadPS")
     add_load_to_solver_set("DeckLoadPS", "DeckLoadPS1")
@@ -428,7 +516,6 @@ def main() :
     ########################################################################
     ########################################################################
 
-    the_lw.WriteFullline("Creating solution: Transverse")
     create_solution("Transverse")
     create_subcase("Transverse", "PS")
     create_subcase("Transverse", "Center")
@@ -450,7 +537,6 @@ def main() :
     ########################################################################
     ########################################################################
     
-    the_lw.WriteFullline("Creating solution: Longitudinal")
     create_solution("Longitudinal")
     create_subcase("Longitudinal", "Aft")
     create_subcase("Longitudinal", "Middle")
@@ -472,7 +558,6 @@ def main() :
     ########################################################################
     ########################################################################
 
-    the_lw.WriteFullline("Creating solution: Combined")
     create_solution("Combined")
     for i in range(3):
         create_subcase("Combined", "Subcase" + str(i + 1))

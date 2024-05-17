@@ -1,7 +1,7 @@
-# intellisense by theScriptingEngineer
-# untested
+ # intellisense by theScriptingEngineer
+ # untested
 
-# The code for EnvelopeResults is only available in NX version 1980, release 2021.2 onwards. For earlier NX versions, use PostProcessing.py
+ # The code for EnvelopeResults has been depricated in NX version 1980, release 2021.2
 
 import math
 import sys
@@ -39,7 +39,7 @@ class PostInput:
         self._resultType = resultType
         self._identifier = identifier
 
-    def __repr__(self) -> str:
+    def ToString(self) -> str:
         """String representation of a PostInput"""
         return "Solution: " + self._solution + " Subcase: " + str(self._subcase) + " Iteration: " + str(self._iteration) + " ResultType: " + self._resultType + " Identifier: " + self._identifier
 
@@ -193,6 +193,7 @@ def get_sim_result_reference(solution_name: str, reference_type: str = "Structur
     simResultReference: NXOpen.CAE.SimResultReference = cast(NXOpen.CAE.SimResultReference, simSolution.Find(reference_type))
     return simResultReference
 
+
 def create_full_path(file_name: str, extension: str = ".unv") -> str:
     """This function takes a filename and adds the .unv extension and path of the part if not provided by the user.
     If the fileName contains an extension, this function leaves it untouched, othwerwise adds .unv as extension.
@@ -236,7 +237,7 @@ def check_post_input(post_inputs: List[PostInput]) -> None:
         # Does the solution exist?
         sim_solution: NXOpen.CAE.SimSolution = get_solution(post_inputs[i]._solution)
         if sim_solution == None:
-            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
+            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
             the_lw.WriteFullline("Solution with name " + post_inputs[i]._solution + " not found.")   
             raise ValueError("Solution with name " + post_inputs[i]._solution + " not found")
         
@@ -245,7 +246,7 @@ def check_post_input(post_inputs: List[PostInput]) -> None:
         try:
             solution_result = load_results([post_inputs[i]])
         except:
-            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
+            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
             the_lw.WriteFullline("No result for Solution with name " + post_inputs[i]._solution)   
             raise
         
@@ -255,7 +256,7 @@ def check_post_input(post_inputs: List[PostInput]) -> None:
         try:
             loadCase = cast(NXOpen.CAE.Loadcase, base_load_cases[post_inputs[i]._subcase - 1]) # user starts counting at 1
         except:
-            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
+            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
             the_lw.WriteFullline("SubCase with number " + str(post_inputs[i]._subcase) + " not found in solution with name " + post_inputs[i]._solution)
             raise
 
@@ -265,7 +266,7 @@ def check_post_input(post_inputs: List[PostInput]) -> None:
         try:
             iteration = cast(NXOpen.CAE.Iteration, base_iterations[post_inputs[i]._iteration - 1]) # user starts counting at 1
         except:
-            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
+            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
             the_lw.WriteFullline("Iteration number " + str(post_inputs[i]._iteration) + "not found in SubCase with number " + str(post_inputs[i]._subcase) + " in solution with name " + post_inputs[i]._solution) 
             raise
 
@@ -274,7 +275,7 @@ def check_post_input(post_inputs: List[PostInput]) -> None:
         base_result_type: List[NXOpen.CAE.BaseResultType] = [item for item in base_result_types if item.Name.lower().strip() == post_inputs[i]._resultType.lower().strip]
         if len(base_result_type) == 0:
             # resulttype does not exist
-            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
+            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
             the_lw.WriteFullline("ResultType " + post_inputs[i]._resultType + "not found in iteration number " + str(post_inputs[i]._iteration) + " in SubCase with number " + str(post_inputs[i]._subcase) + " in solution with name " + post_inputs[i]._solution)
             raise ValueError("ResultType " + post_inputs[i]._resultType + "not found in iteration number " + str(post_inputs[i]._iteration) + " in SubCase with number " + str(post_inputs[i]._subcase) + " in solution with name " + post_inputs[i]._solution)
 
@@ -293,7 +294,7 @@ def check_post_input_identifiers(post_inputs: List[PostInput]) -> None:
     for i in range(len(post_inputs)):
         # is the identifier not null
         if post_inputs[i]._identifier == "":
-            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
+            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
             the_lw.WriteFullline("No identifier provided for solution " + post_inputs[i]._solution + " SubCase " + str(post_inputs[i]._subcase) + " iteration " + str(post_inputs[i]._iteration) + " ResultType " + post_inputs[i]._resultType) 
             raise ValueError("No identifier provided for solution " + post_inputs[i]._solution + " SubCase " + str(post_inputs[i]._subcase) + " iteration " + str(post_inputs[i]._iteration) + " ResultType " + post_inputs[i]._resultType)
 
@@ -301,14 +302,14 @@ def check_post_input_identifiers(post_inputs: List[PostInput]) -> None:
         nx_reserved_expressions: List[str] = ["angle", "angular velocity", "axial", "contact pressure", "Corner ID", "depth", "dynamic viscosity", "edge_id", "element_id", "face_id", "fluid", "fluid temperature", "frequency", "gap distance", "heat flow rate", "iter_val", "length", "mass density", "mass flow rate", "node_id", "nx", "ny", "nz", "phi", "pressure", "radius", "result", "rotational speed", "solid", "solution", "specific heat", "step", "temperature", "temperature difference", "thermal capacitance", "thermal conductivity", "theta", "thickness", "time", "u", "v", "velocity", "volume flow rate", "w", "x", "y", "z"]
         check: List[str] = [item for item in nx_reserved_expressions if item.lower() == post_inputs[i]._identifier.lower()]
         if len(check) != 0:
-            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
+            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
             the_lw.WriteFullline("Expression with name " + post_inputs[i]._identifier + " is a reserved expression in nx and cannot be used as an identifier.");  
             raise ValueError("Expression with name " + post_inputs[i]._identifier + " is a reserved expression in nx and cannot be used as an identifier.")
 
         # check if identifier is not already in use as an expression
         expressions: List[NXOpen.Expression] = [item for item in base_part.Expressions if item.Name.lower() == post_inputs[i]._identifier.lower()]
         if len(expressions) != 0:
-            the_lw.WriteFullline("Error in input " + str(post_inputs[i]))
+            the_lw.WriteFullline("Error in input " + post_inputs[i].ToString())
             the_lw.WriteFullline("Expression with name " + post_inputs[i]._identifier + " already exist in this part and cannot be used as an identifier.")
             raise ValueError("Expression with name " + post_inputs[i]._identifier + " already exist in this part and cannot be used as an identifier.")
 
@@ -577,13 +578,13 @@ def export_result(post_input: PostInput, unv_file_name: str, si_units: bool = Fa
                 sim_part.Expressions.Delete(check[0])
 
 
-def get_result_paramaters(result_types: List[NXOpen.CAE.BaseResultType], result_shell_section: NXOpen.CAE.Result.ShellSection, result_component: NXOpen.CAE.Result.Component, absolute: bool) -> List[NXOpen.CAE.ResultParameters]:
+def get_result_paramaters(result_types: List[NXOpen.CAE.BaseResultType], result_section: NXOpen.CAE.Result.Section, result_component: NXOpen.CAE.Result.Component, absolute: bool) -> List[NXOpen.CAE.ResultParameters]:
     result_parameter_list: List[NXOpen.CAE.ResultParameters] = [NXOpen.CAE.ResultParameters] * len(result_types)
 
     for i in range(len(result_parameter_list)):
         result_parameters: NXOpen.CAE.ResultParameters = the_session.ResultManager.CreateResultParameters()
         result_parameters.SetGenericResultType(result_types[i])
-        result_parameters.SetShellSection(result_shell_section)
+        result_parameters.SetResultShellSection(result_section)
         result_parameters.SetResultComponent(result_component)
         result_parameters.SetSelectedCoordinateSystem(NXOpen.CAE.Result.CoordinateSystem.None, -1)
         result_parameters.MakeElementResult(False)
@@ -601,7 +602,7 @@ def get_result_paramaters(result_types: List[NXOpen.CAE.BaseResultType], result_
     return result_parameter_list
 
 
-def envelope_results(post_inputs: List[PostInput], companion_result_name: str, unv_file_name: str, envelope_operation: NXOpen.CAE.ResultsManipulationEnvelopeBuilder.Operation, result_shell_section: NXOpen.CAE.Result.ShellSection, resultComponent: NXOpen.CAE.Result.Component, absolute: bool, solution_name: str = "") -> None:
+def envelope_results(post_inputs: List[PostInput], companion_result_name: str, unv_file_name: str, envelope_operation: NXOpen.CAE.ResultsEnvelopeBuilder.Operation, result_section: NXOpen.CAE.Result.Section, result_component: NXOpen.CAE.Result.Component, absolute: bool, solution_name: str = "") -> None:
     if not isinstance(base_part, NXOpen.CAE.SimPart):
         the_lw.WriteFullline("ExportResult needs to start from a .sim file. Exiting")
         return
@@ -641,12 +642,12 @@ def envelope_results(post_inputs: List[PostInput], companion_result_name: str, u
         sim_result_reference = get_sim_result_reference(post_inputs[0]._solution)
 
     # Make sure the file is complete with path and extension
-    unv_full_name: str = create_full_path(unv_file_name)
+    unvFullName: str = create_full_path(unv_file_name)
 
     # Check if unvFullName is not already in use by another companion result
     # No risk of checking the file for this companion result as DeleteCompanionResult has already been called.
     try:
-        check_unv_file_name(unv_full_name)
+        check_unv_file_name(unvFullName)
     except ValueError as e:
         # ChechUnvFileName throws an error with the message containing the filename and the companion result.
         the_lw.WriteFullline(e)
@@ -659,41 +660,38 @@ def envelope_results(post_inputs: List[PostInput], companion_result_name: str, u
     result_types: List[NXOpen.CAE.BaseResultType] = get_result_types(post_inputs, solution_results)
 
     # create an array of resultParameters with the inputs and settings from the user.
-    result_parameters: List[NXOpen.CAE.ResultParameters] = get_result_paramaters(result_types, result_shell_section, resultComponent, absolute)
+    result_parameters: List[NXOpen.CAE.ResultParameters] = get_result_paramaters(result_types, result_section, result_component, absolute)
 
-    results_manipulation_envelope_builder: NXOpen.CAE.ResultsManipulationEnvelopeBuilder = the_session.ResultManager.CreateResultsManipulationEnvelopeBuilder()
-    results_manipulation_envelope_builder.InputSettings.SetResultsAndParameters(solution_results, result_parameters)
-
-    results_manipulation_envelope_builder.OperationOption = envelope_operation
-
-    results_manipulation_envelope_builder.OutputFileSettings.ResultModeOption = NXOpen.CAE.ResultsManipOutputFileSettings.ResultMode.Companion
-    results_manipulation_envelope_builder.OutputFileSettings.AppendMethodOption = NXOpen.CAE.ResultsManipOutputFileSettings.AppendMethod.CreateNewLoadCase
-    results_manipulation_envelope_builder.OutputFileSettings.NeedExportModel = False
-    results_manipulation_envelope_builder.OutputFileSettings.OutputName = str(envelope_operation) + " " + str(result_types[0].Quantity) + " (" + str(resultComponent) + ")"
-    results_manipulation_envelope_builder.OutputFileSettings.LoadCaseName = companion_result_name
-    results_manipulation_envelope_builder.OutputFileSettings.CompanionName = companion_result_name
-    results_manipulation_envelope_builder.OutputFileSettings.NeedLoadImmediately = True
-    results_manipulation_envelope_builder.OutputFileSettings.OutputFile = unv_full_name
-    results_manipulation_envelope_builder.OutputFileSettings.CompanionResultReference = sim_result_reference
-
-    results_manipulation_envelope_builder.UnitSystem.UnitsSystemType = NXOpen.CAE.ResultsManipulationUnitsSystem.Type.FromResult
-    results_manipulation_envelope_builder.UnitSystem.Result = solution_results[0]
-
-    results_manipulation_envelope_builder.ErrorHandling.IncompatibleResultsOption = NXOpen.CAE.ResultsManipulationErrorHandling.IncompatibleResults.Skip
-    results_manipulation_envelope_builder.ErrorHandling.NoDataOption = NXOpen.CAE.ResultsManipulationErrorHandling.NoData.Skip
+    results_envelope_builder: NXOpen.CAE.ResultsEnvelopeBuilder = the_session.ResultManager.CreateResultsEnvelopeBuilder()
+    results_envelope_builder.SetResults(solution_results, result_parameters)
+    results_envelope_builder.SetOperation(envelope_operation)
+    results_envelope_builder.SetOutputResultType(NXOpen.CAE.ResultsManipulationBuilder.OutputResultType.Companion)
+    results_envelope_builder.SetIncludeModel(False)
+    results_envelope_builder.SetCompanionResultReference(sim_result_reference)
+    results_envelope_builder.SetCompanionResultName(companion_result_name)
+    results_envelope_builder.SetAppendMethod(NXOpen.CAE.ResultsManipulationBuilder.ResultAppendMethod.CreateNewLoadCases)
+    results_envelope_builder.SetImportResult(True)
+    results_envelope_builder.SetOutputQuantity(result_types[0].Quantity)
+    results_envelope_builder.SetOutputName(str(envelope_operation) + " " + str(result_types[0].Quantity) + " (" + str(result_component) + ")") # ("Maximum Stress(Von-Mises)")
+    results_envelope_builder.SetLoadcaseName(companion_result_name)
+    results_envelope_builder.SetOutputFile(unvFullName)
+    results_envelope_builder.SetUnitsSystem(NXOpen.CAE.ResultsManipulationBuilder.UnitsSystem.FromResult)
+    results_envelope_builder.SetUnitsSystemResult(solution_results[0])
+    results_envelope_builder.SetIncompatibleResultsOption(NXOpen.CAE.ResultsEnvelopeBuilder.IncompatibleResults.Skip)
+    results_envelope_builder.SetNoDataOption(NXOpen.CAE.ResultsEnvelopeBuilder.NoData.Skip)
 
     # get the full result names for user feedback. Do this before the try catch block, otherwise the variable is no longer available
-    full_result_names: List[str]  = get_full_result_names(post_inputs, solution_results)
+    fullResultNames: List[str]  = get_full_result_names(post_inputs, solution_results)
 
     try:
-        results_manipulation_envelope_builder.Commit()
+        results_envelope_builder.Commit()
 
         # user feedback
-        the_lw.WriteFullline("Created an envelope for the following results for " + str(envelope_operation) + " " + str(resultComponent))
+        the_lw.WriteFullline("Created an envelope for the following results for " + str(envelope_operation) + " " + str(result_component))
         for i in range(len(post_inputs)):
-            the_lw.WriteFullline(full_result_names[i])
+            the_lw.WriteFullline(fullResultNames[i])
 
-        the_lw.WriteFullline("Section location: " + str(result_shell_section))
+        the_lw.WriteFullline("Section location: " + str(result_section))
         the_lw.WriteFullline("Absolute: " + str(absolute))
     
     except ValueError as e:
@@ -702,7 +700,9 @@ def envelope_results(post_inputs: List[PostInput], companion_result_name: str, u
         raise e
     
     finally:
-        results_manipulation_envelope_builder.Destroy()
+        results_envelope_builder.Destroy()
+        for i in range(len(result_parameters)):
+            the_session.ResultManager.DeleteResultParameters(result_parameters[i])
 
 
 def main() :
