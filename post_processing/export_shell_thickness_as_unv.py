@@ -146,6 +146,7 @@ def create_thickness_records(base_fem_part: NXOpen.CAE.BaseFemPart, fe_element: 
     result: List[str] = [record14_elemental + record15_elemental, record14_element_nodal + record15_element_nodal]
     return result
 
+
 def create_thickness_datasets(base_fem_part: NXOpen.CAE.BaseFemPart) -> List[str]:
     """This function creates an elemental and element-nodal thickness dataset
        for all shell elements in the base_fem_part.
@@ -181,6 +182,7 @@ def create_thickness_datasets(base_fem_part: NXOpen.CAE.BaseFemPart) -> List[str
 
     thickness_datasets: List[str] = [thickness_dataset_elemental, thickness_dataset_element_nodal]
     return thickness_datasets
+
 
 def create_full_path(file_name: str, extension: str = ".unv") -> str:
     """This function takes a filename and adds the .unv extension and path of the part if not provided by the user.
