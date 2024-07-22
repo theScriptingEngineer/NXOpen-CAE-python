@@ -577,25 +577,27 @@ def main() -> None:
     root = tk.Tk()
     root.withdraw()
 
-    file_path = filedialog.askopenfilename(title = "Select input file",filetypes = (("csv files (*.csv)","*.csv"),))
+    # file_paths is a tuple with all the selected files (user can select multiple files)
+    file_paths = filedialog.askopenfilename(title = "Select input file",filetypes = (("csv files (*.csv)","*.csv"),))
 
-    if file_path == None:
+    if file_paths == None:
         # user pressed cancel
         return
 
     # read the input file into an array of ScreenShot
     # it's user input, so errors can occur
     screenshots: List[ScreenShot] = []
-    try:
-        screenshots = read_screenshot_definitions(file_path)
-    except Exception as e:
-        the_lw.WriteFullline("Failed to parse file " + file_path + ". Please check the screenshot definitions in the file.")
-        the_lw.WriteFullline(str(e))
-        return
+    for file_path in file_paths:
+        try:
+            screenshots = read_screenshot_definitions(file_path)
+        except Exception as e:
+            the_lw.WriteFullline("Failed to parse file " + file_path + ". Please check the screenshot definitions in the file.")
+            the_lw.WriteFullline(str(e))
+            return
     
     # check for empty file
     if len(screenshots) == 0:
-        the_lw.WriteFullline("The file " + file_path + " is empty.")
+        the_lw.WriteFullline(f"The file(s) {file_paths} is empty.")
         return
     
     # check input and catch errors so that the user doesn't get a error pop-up in SC
