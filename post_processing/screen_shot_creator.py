@@ -71,7 +71,7 @@ from tkinter import filedialog
 import NXOpen
 import NXOpen.CAE
 import NXOpen.Gateway # for creating the image
-from typing import List, cast, Optional, Union
+from typing import Dict, List, cast, Optional, Union
 
 the_session: NXOpen.Session = NXOpen.Session.GetSession()
 the_ui: NXOpen.UI = NXOpen.UI.GetUI() # type: ignore
@@ -365,6 +365,9 @@ def display_elements_in_group_via_postgroup(postview_id: int, group_name: str) -
     # NX creates it's own postgroups from the groups in the sim.
     # It only creates a postgroup if either nodes or elements are present in the group.
     # Therefore it's hard to relate the postgroup labels to the group labels in the simfile...
+
+    # however, CreateUserGroupFromEntityLabels has a bug as it only accepts a single label for the elements
+
     sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part)
     cae_groups: NXOpen.CAE.CaeGroupCollection = sim_part.CaeGroups
     cae_group: NXOpen.CAE.CaeGroup = [x for x in cae_groups if x.Name.lower() == group_name.lower()][0]
@@ -378,24 +381,84 @@ def display_elements_in_group_via_postgroup(postview_id: int, group_name: str) -
             groupElementLabels[i + 1] = (cast(NXOpen.CAE.FEElement, groupItems[i])).Label
 
     userGroupIds: List[int] = [int] * 1
-    # This creates a "PostGroup"
+    # This creates a "PostGroup", but there is a bug in CreateUserGroupFromEntityLabels as it accepts only a single label for the elements
     userGroupIds[0] = the_session.Post.CreateUserGroupFromEntityLabels(postview_id, NXOpen.CAE.CaeGroupCollection.EntityType.Element, groupElementLabels) # type: ignore
     the_session.Post.PostviewApplyUserGroupVisibility(postview_id, userGroupIds, NXOpen.CAE.Post.GroupVisibility.ShowOnly) # type: ignore
 
 
 def display_elements_in_group(postview_id: int, group_name: str) -> None:
     if nx_version == "v12":
-        display_elements_in_group_via_postgroup(postview_id, group_name)
+        the_lw.WriteFullline("Error: Due to a bug in the NX API, the group " + group_name + " cannot be displayed, because it has not been defined in the sim file.")
+        the_lw.WriteFullline("A workaround is to create the same group in the sim file and use that in the journal.")
+        # display_elements_in_group_via_postgroup(postview_id, group_name)
+        raise ValueError("Group " + group_name + " not found in the sim file.")
     else:
         # The next function only works for Groups created in the .sim file (at least when used like this)
         # And not for groups inherited from the fem or afem file. Also using the JournalIdentifier did not work.
         # Therefore a workaround with a postgroup for these fem or afem groups.
         usergroups_gids = the_session.Post.PostviewGetUserGroupGids(postview_id, [group_name]) # type: ignore single string according docs
         if len(usergroups_gids) == 0:
-            # the_lw.WriteFullline("Warning: group " + group_name + " is not a sim groups and is displayed through a temporaty PostGroup")
-            display_elements_in_group_via_postgroup(postview_id, group_name)
+            the_lw.WriteFullline("Error: Due to a bug in the NX API, the group " + group_name + " cannot be displayed, because it has not been defined in the sim file.")
+            the_lw.WriteFullline("A workaround is to create the same group in the sim file and use that in the journal.")
+            # display_elements_in_group_via_postgroup(postview_id, group_name)
+            raise ValueError("Group " + group_name + " not found in the sim file.")
         else:
             the_session.Post.PostviewApplyUserGroupVisibility(postview_id, usergroups_gids, NXOpen.CAE.Post.GroupVisibility.ShowOnly) # type: ignore
+
+
+def display_elements_in_group_using_workaround(postview_id: int, group_name: str) -> None:
+    # this should also work for NX12 (not tested)
+    usergroups_gids = the_session.Post.PostviewGetUserGroupGids(postview_id, [group_name]) # type: ignore single string according docs
+    if len(usergroups_gids) == 0:
+        # the_lw.WriteFullline(f'Using workaround for non-sim group {group_name} using the earlier copied group {group_name + "_screenshot_generator_temp"}')
+        usergroups_gids = the_session.Post.PostviewGetUserGroupGids(postview_id, [group_name + "_screenshot_generator_temp"]) # type: ignore single string according docs
+        # the_lw.WriteFullline(str(usergroups_gids))
+        if len(usergroups_gids) == 0:
+            the_lw.WriteFullline(f'Error: Group {group_name + "_screenshot_generator_temp"} not found in the sim file.')
+            raise ValueError(f'Group {group_name + "_screenshot_generator_temp"} not found in the sim file.')
+        else:
+            the_session.Post.PostviewApplyUserGroupVisibility(postview_id, usergroups_gids, NXOpen.CAE.Post.GroupVisibility.ShowOnly) # type: ignore
+    else:
+        the_session.Post.PostviewApplyUserGroupVisibility(postview_id, usergroups_gids, NXOpen.CAE.Post.GroupVisibility.ShowOnly) # type: ignore
+
+
+def map_group_to_postgroup(postview_id: int) -> Dict[str, int]:
+    # this function is just for future reference, as it is not used in the journal
+    # the numbering of the postgroups is not the same as the numbering of the groups in the sim file
+    # and also depends on the number of postviews already created
+    # In NX12 the postgroup number would also depend on how many postview were already created in the session.
+    # NX2212 does not seem to have this issue anymore.
+
+    the_session.Post.UpdateUserGroupsFromSimPart() # type: ignore
+    sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part)
+    all_groups: List[NXOpen.CAE.CaeGroup] = [group for group in sim_part.CaeGroups] # type: ignore
+    # the postgroups are all groups with either nodes or elements or both
+    all_groups_with_nodes_or_elements: List[NXOpen.CAE.CaeGroup] = []
+    flag: bool = False
+    for group in all_groups:
+        for item in group.GetEntities():
+            if flag:
+                flag = False
+                break
+            if isinstance(item, NXOpen.CAE.FEElement) or isinstance(item, NXOpen.CAE.FENode):
+                all_groups_with_nodes_or_elements.append(group)
+                flag = True
+    
+    # per for a try catch from a high number down, untill the PostviewApplyUserGroupVisibility does not throw an error
+    # this is the last postgroup number.
+    usergroup_ids = [None] * 1
+    counter: int = len(all_groups) + 100 # cannot be longer than the actual number of groups, but 
+    while True:
+        usergroup_ids[0] = counter
+        try:
+            the_session.Post.PostviewApplyUserGroupVisibility(postview_id, usergroup_ids, NXOpen.CAE.Post.GroupVisibility.ShowOnly) # type: ignore
+            break
+        except:
+            counter -= 1
+     # counter is now the index of the last postgroup.
+     # still to implement the mapping.
+     # theoretically the postgroup number should be the same as the index in all_groups_with_nodes_or_elements, but see earlier comment for NX12
+        
 
 
 def create_annotation(postview_id: int, annotation_text: str) -> NXOpen.CAE.PostAnnotation:
@@ -437,12 +500,13 @@ def print_message() -> None:
     the_lw.WriteFullline("                             brought to you by theScriptingEngineer                               ")
     the_lw.WriteFullline("                                   www.theScriptingEngineer.com                                   ")
     the_lw.WriteFullline("                                  More journals can be found at:                                  ")
-    the_lw.WriteFullline("                        https:#github.com/theScriptingEngineer/NXOpen-CAE                        ")
+    the_lw.WriteFullline("                        https:#github.com/theScriptingEngineer/nxopentse                        ")
     the_lw.WriteFullline("##################################################################################################")
     the_lw.WriteFullline("##################################################################################################")
     the_lw.WriteFullline("##################################################################################################")
     the_lw.WriteFullline("                                          Learn NXOpen at                                         ")
-    the_lw.WriteFullline("https:#www.udemy.com/course/simcenter3d-basic-nxopen-course/?referralCode=4ABC27CFD7D2C57D220B%20")
+    the_lw.WriteFullline("https://www.udemy.com/course/simcenter3d-basic-nxopen-course/?referralCode=4ABC27CFD7D2C57D220B%20")
+    the_lw.WriteFullline("https://www.udemy.com/course/siemens-nx-beginner-nxopen-course-python/?referralCode=DEE8FAB445765802FEDC")
     the_lw.WriteFullline("##################################################################################################")
     the_lw.WriteFullline("##################################################################################################")
     the_lw.WriteFullline("##################################################################################################")
@@ -566,6 +630,64 @@ def delete_post_groups() -> None:
         the_lw.WriteFullline("Removed automatically created PostGroups")
 
 
+def create_string_attribute(nx_object: NXOpen.NXObject, title: str, value: str, work_part: NXOpen.BasePart=None) -> None:
+    if work_part is None:
+        work_part = the_session.Parts.BaseWork
+    objects1 = [NXOpen.NXObject.Null] * 1 
+    objects1[0] = nx_object
+    attribute_manager: NXOpen.AttributeManager = the_session.AttributeManager
+    attributePropertiesBuilder1 = attribute_manager.CreateAttributePropertiesBuilder(work_part, objects1, NXOpen.AttributePropertiesBuilder.OperationType.NotSet) # type: ignore
+    
+    attributePropertiesBuilder1.IsArray = False
+    
+    attributePropertiesBuilder1.DataType = NXOpen.AttributePropertiesBaseBuilder.DataTypeOptions.String
+    
+    attributePropertiesBuilder1.Title = title
+    
+    attributePropertiesBuilder1.StringValue = value
+    
+    nXObject1 = attributePropertiesBuilder1.Commit()
+    
+    id1 = the_session.GetNewestUndoMark(NXOpen.Session.MarkVisibility.Visible)
+    
+    nErrs1 = the_session.UpdateManager.DoUpdate(id1)
+    
+    attributePropertiesBuilder1.Destroy()    
+
+
+def copy_groups_to_sim_part(sim_part: NXOpen.CAE.SimPart, groups_in_screenshots: List[str]=[]) -> List[NXOpen.CAE.CaeGroup]:
+    copied_groups: List[NXOpen.CAE.CaeGroup] = []
+    sim_groups: List[NXOpen.CAE.CaeGroup] = [item for item in sim_part.CaeGroups]
+    for i in range(len(sim_groups)):
+        # don't copy the group if it's not used in the screenshots
+        if not sim_groups[i].Name in groups_in_screenshots:
+            continue
+        # dont copy the group if it's a sim group
+        if sim_groups[i].OwningComponent is None:
+            # the_lw.WriteFullline(f'{i} {sim_groups[i].Name} is a sim group')
+            continue
+        # skip output groups since these are not user created.
+        if sim_groups[i].Name == "OUTPUT GROUP":
+            # the_lw.WriteFullline(f'{i} {sim_groups[i].Name} is a sim group')
+            continue
+        # don't copy the group if it has been copied earlier
+        test: List[NXOpen.CAE.CaeGroup] = [item for item in sim_groups if item.Name == sim_groups[i].Name + '_screenshot_generator_temp']
+        if len(test) > 0:
+            # the_lw.WriteFullline(f'{i} {sim_groups[i].Name} already has a temp group')
+            continue
+        else:
+            enties = sim_groups[i].GetEntities()
+            # the_lw.WriteFullline(f'{i} {sim_groups[i].Name} with {len(enties)} entities')
+            if len(enties) == 0:
+                # the_lw.WriteFullline(f'{i} {sim_groups[i].Name} has no entities')
+                continue
+            group: NXOpen.CAE.CaeGroup = sim_part.CaeGroups.CreateGroup(sim_groups[i].Name + '_screenshot_generator_temp', sim_groups[i].GetEntities())
+            create_string_attribute(group, 'screenshot_generator', 'true')
+            copied_groups.append(group)
+    
+    return copied_groups
+
+
 def main() -> None:
     the_lw.Open()
 
@@ -578,18 +700,18 @@ def main() -> None:
     root.withdraw()
 
     # file_paths is a tuple with all the selected files (user can select multiple files)
-    file_paths = filedialog.askopenfilename(title = "Select input file",filetypes = (("csv files (*.csv)","*.csv"),))
+    file_paths = filedialog.askopenfilenames(title = "Select input file", filetypes = (("csv files (*.csv)","*.csv"),))
 
-    if file_paths == None:
+    if file_paths == '':
         # user pressed cancel
         return
 
     # read the input file into an array of ScreenShot
     # it's user input, so errors can occur
     screenshots: List[ScreenShot] = []
-    for file_path in file_paths:
+    for file_path in list(file_paths):
         try:
-            screenshots = read_screenshot_definitions(file_path)
+            screenshots.extend(read_screenshot_definitions(file_path))
         except Exception as e:
             the_lw.WriteFullline("Failed to parse file " + file_path + ". Please check the screenshot definitions in the file.")
             the_lw.WriteFullline(str(e))
@@ -607,6 +729,22 @@ def main() -> None:
         the_lw.WriteFullline("The following error occured while checking the screenshot definitions:")
         the_lw.WriteFullline(str(e))
         return
+
+    # PostviewGetUserGroupGids only works with groups created in the .sim file
+    # the workaround is to create a postgroup with the same elements using the function CreateUserGroupFromEntityLabels
+    # however, the latter only accepts a single label for the element
+    # there are 2 possible workaourns:
+    # 1. Get the postgroup index from the sim group and use that in the PostviewApplyUserGroupVisibility, however, the index is not the same as the group number
+    #    because only groups which have nodes or elements are converted to postgroups
+    # 2. Copy all non-sim groups to the sim part and use the PostviewApplyUserGroupVisibility
+    
+    # implement workaround 2
+    sim_part: NXOpen.CAE.SimPart = cast(NXOpen.CAE.SimPart, base_part)
+    # improve performance by only copying the groups used in the screenshots
+    groups_in_screenshots: List[str] = [screenshot._group_name for screenshot in screenshots]
+    copied_groups: List[NXOpen.CAE.CaeGroup] = copy_groups_to_sim_part(sim_part, groups_in_screenshots)
+    the_session.Post.UpdateUserGroupsFromSimPart(sim_part) # type: ignore
+    # now if a group is not found using PostviewGetUserGroupGids, get the group which has been copied to the sim part
     
     # sort for performance in NX
     # we don't put requirements on the order of the screen shots,
@@ -654,8 +792,8 @@ def main() -> None:
         # postview_id = display_result(screenshots[i], solutionResults[i], screenshots[i]._component_name)
         change_component(postview_id, screenshots[i]._component_name)
 
-        # Set the group to display
-        display_elements_in_group(postview_id, screenshots[i]._group_name)
+        # Set the group to display, using the workaround described earlier
+        display_elements_in_group_using_workaround(postview_id, screenshots[i]._group_name)
 
         # Create the annotation but only if one given.
         post_annotation: NXOpen.CAE.PostAnnotation = None
@@ -677,6 +815,20 @@ def main() -> None:
     # cae_groups: NXOpen.CAE.CaeGroupCollection = sim_part.CaeGroups
     # Therefore deleting all created PostGroups
     delete_post_groups()
+
+    # Delete all copied groups.
+    # use the name, in case a crash has happend at some point
+    # for group in copied_groups:
+    #     the_session.UpdateManager.AddObjectsToDeleteList([group])
+    # undo_mark_id = the_session.SetUndoMark(NXOpen.Session.MarkVisibility.Invisible, "deleteCopiedGroups")
+    # the_session.UpdateManager.DoUpdate(undo_mark_id)
+
+    sim_groups: List[NXOpen.CAE.CaeGroup] = [item for item in sim_part.CaeGroups]
+    for group in sim_groups:
+        if group.Name.endswith('_screenshot_generator_temp'):
+            the_session.UpdateManager.AddObjectsToDeleteList([group])
+    undo_mark_id = the_session.SetUndoMark(NXOpen.Session.MarkVisibility.Invisible, "deleteCopiedGroups")
+    the_session.UpdateManager.DoUpdate(undo_mark_id)
 
     print_message()
 
