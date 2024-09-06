@@ -1,5 +1,5 @@
 # intellisense by theScriptingEngineer (www.theScriptingEngineer.com)
-# Untested
+# Tested in SC2212
 
 import sys
 import math
@@ -17,18 +17,18 @@ def main():
     theLW.WriteFullline("Starting Main() in " + theSession.ExecutingJournal)
 
     # full path of the part to add as a component
-    file_name = "LocationWithFullPath"
+    file_name = r"D:\JdN\model1.prt"
     # The name of the reference set used to represent the new component
-    referenceset_name = "ReferenceSetName"
+    referenceset_name = "Entire Part"
     # The name of the new component
-    component_name = "ComponentName"
+    component_name = "my_component"
     # The layer to place the new component on:
     # -1 means use the original layers defined in the component.
     # 0 means use the work layer.
     # 1-256 means use the specified layer.
     layer: int = 1
     # Location of the new component
-    base_point = NXOpen.Point3d(0, 0, 0)
+    base_point = NXOpen.Point3d(0.0, 0.0, 0.0)
     # Orientation of the new component
     orientation: NXOpen.Matrix3x3 = NXOpen.Matrix3x3()
     orientation.Xx = 1
